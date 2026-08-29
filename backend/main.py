@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 
+from routes.risk import router as risk_router
+from routes.dashboard import router as dashboard_router
+
 app = FastAPI(title="PAIMANA AI")
 
 
@@ -73,6 +76,11 @@ projects = [
 def get_projects():
     return projects
 
+
+# -----------------------------
+# GET PROJECT BY ID
+# -----------------------------
+
 @app.get("/projects/{project_id}")
 def get_project(project_id: int):
 
@@ -84,3 +92,11 @@ def get_project(project_id: int):
     return {
         "error": "Project not found"
     }
+
+
+# -----------------------------
+# RISK ROUTES
+# -----------------------------
+
+app.include_router(risk_router)
+app.include_router(dashboard_router)
