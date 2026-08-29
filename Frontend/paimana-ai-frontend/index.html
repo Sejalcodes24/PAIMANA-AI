@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAIMANA AI — Infrastructure Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">P</div>
+        <div>
+          <div class="brand-name">PAIMANA <span>AI</span></div>
+          <div class="brand-sub">Infrastructure Intelligence</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <div class="nav-label">MONITORING</div>
+        <button class="nav-item active" data-page="dashboard"><span>⌂</span> Dashboard</button>
+        <button class="nav-item" data-page="projects"><span>▤</span> Projects</button>
+        <button class="nav-item" data-page="risk"><span>◉</span> Risk Analytics</button>
+        <button class="nav-item" data-page="warnings"><span>⚠</span> Early Warnings</button>
+        <div class="nav-label">INTELLIGENCE</div>
+        <button class="nav-item" data-page="assistant"><span>✦</span> AI Assistant</button>
+        <button class="nav-item" data-page="reports"><span>▥</span> Reports</button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="system-status"><span class="status-dot"></span><div><strong>Systems operational</strong><small>PAIMANA data services</small></div></div>
+        <div class="user-card">
+          <div class="avatar">AD</div>
+          <div><strong>Admin Dashboard</strong><small>Monitoring access</small></div>
+          <span class="chevron">⌄</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu">☰</button>
+        <div class="breadcrumb"><span>PAIMANA</span><b>/</b><strong id="pageCrumb">Dashboard</strong></div>
+        <div class="top-actions">
+          <div class="data-pill"><span class="live-dot"></span> Data refreshed <strong>Apr 2026</strong></div>
+          <button class="icon-btn" title="Notifications" id="notifyBtn">♢<span class="notification-dot"></span></button>
+          <div class="profile-mini"><div class="avatar">AD</div><span>Administrator</span>⌄</div>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- DASHBOARD -->
+        <section class="page active" id="page-dashboard">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">NATIONAL INFRASTRUCTURE MONITORING</p>
+              <h1>Portfolio overview</h1>
+              <p class="muted">A predictive view of project performance, risk and emerging intervention needs.</p>
+            </div>
+            <div class="heading-actions">
+              <button class="btn secondary" id="refreshBtn">↻ Refresh data</button>
+              <button class="btn primary" id="exportBtn">⇩ Export snapshot</button>
+            </div>
+          </div>
+
+          <div class="filters">
+            <div class="filter-title">FILTERS</div>
+            <select id="ministryFilter"><option value="all">All Ministries</option><option value="MoRTH">Road Transport</option><option value="MoHUA">Urban Development</option><option value="Water">Water Resources</option></select>
+            <select id="sectorFilter"><option value="all">All Sectors</option><option>Transport</option><option>Urban Development</option><option>Water Resources</option><option>Energy</option></select>
+            <select id="riskFilter"><option value="all">All Risk Levels</option><option value="High">High Risk</option><option value="Medium">Medium Risk</option><option value="Low">Low Risk</option></select>
+            <select id="stateFilter"><option value="all">All States</option><option>Uttar Pradesh</option><option>Maharashtra</option><option>Rajasthan</option></select>
+            <button class="filter-reset" id="resetFilters">Reset</button>
+          </div>
+
+          <div class="kpi-grid">
+            <article class="kpi-card"><div class="kpi-top"><span>Total Projects</span><span class="kpi-icon">▤</span></div><strong id="totalProjects">1,981</strong><small><em class="positive">↑ 2.4%</em> vs last month</small></article>
+            <article class="kpi-card danger"><div class="kpi-top"><span>High Risk Projects</span><span class="kpi-icon">⚠</span></div><strong id="highRisk">247</strong><small><em class="negative">↑ 8.1%</em> requires attention</small></article>
+            <article class="kpi-card amber"><div class="kpi-top"><span>Cost Risk Exposure</span><span class="kpi-icon">₹</span></div><strong>₹6.84L Cr</strong><small><em class="negative">↑ 4.7%</em> potential exposure</small></article>
+            <article class="kpi-card blue"><div class="kpi-top"><span>Delay Risk</span><span class="kpi-icon">◷</span></div><strong id="delayRisk">318</strong><small><em class="negative">↑ 5.3%</em> projects flagged</small></article>
+          </div>
+
+          <div class="grid-2">
+            <article class="panel chart-panel">
+              <div class="panel-head"><div><h2>Portfolio risk distribution</h2><p>Current model classification across monitored projects</p></div><button class="more-btn">•••</button></div>
+              <div class="risk-chart-wrap">
+                <div class="donut"><div class="donut-center"><strong>1,981</strong><span>projects</span></div></div>
+                <div class="legend">
+                  <div><i class="dot high"></i><span>High risk</span><strong>247 <small>12.5%</small></strong></div>
+                  <div><i class="dot med"></i><span>Medium risk</span><strong>534 <small>27.0%</small></strong></div>
+                  <div><i class="dot low"></i><span>Low risk</span><strong>1,200 <small>60.5%</small></strong></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel chart-panel">
+              <div class="panel-head"><div><h2>Risk by sector</h2><p>Average predicted implementation risk</p></div><select class="tiny-select"><option>Risk score</option><option>Delay</option><option>Cost</option></select></div>
+              <div class="bars">
+                <div class="bar-row"><span>Transport</span><div class="bar-track"><i style="width:82%"></i></div><b>82</b></div>
+                <div class="bar-row"><span>Energy</span><div class="bar-track"><i style="width:68%"></i></div><b>68</b></div>
+                <div class="bar-row"><span>Water</span><div class="bar-track"><i style="width:61%"></i></div><b>61</b></div>
+                <div class="bar-row"><span>Urban Dev.</span><div class="bar-track"><i style="width:48%"></i></div><b>48</b></div>
+                <div class="bar-row"><span>Social Infra.</span><div class="bar-track"><i style="width:31%"></i></div><b>31</b></div>
+              </div>
+            </article>
+          </div>
+
+          <div class="section-head"><div><h2>Projects requiring attention</h2><p>Highest current predicted risk across the portfolio</p></div><button class="text-btn" data-page-link="projects">View all projects →</button></div>
+          <article class="panel table-panel">
+            <div class="table-scroll">
+              <table><thead><tr><th>PROJECT</th><th>SECTOR</th><th>STATE</th><th>OVERALL RISK</th><th>COST RISK</th><th>DELAY RISK</th><th>STATUS</th></tr></thead>
+              <tbody id="riskTable"></tbody></table>
+            </div>
+          </article>
+
+          <div class="grid-2 lower">
+            <article class="panel alert-panel">
+              <div class="panel-head"><div><h2>Early warnings</h2><p>New signals detected this cycle</p></div><button class="text-btn" data-page-link="warnings">View all</button></div>
+              <div class="alert-list">
+                <div class="alert-item"><span class="alert-symbol red">!</span><div><strong>Delay risk increased</strong><p>National Highway Project · +14 points</p></div><time>2h</time></div>
+                <div class="alert-item"><span class="alert-symbol amber">₹</span><div><strong>Cost escalation signal</strong><p>Irrigation Development Project · +9 points</p></div><time>5h</time></div>
+                <div class="alert-item"><span class="alert-symbol amber">↗</span><div><strong>Milestone slippage</strong><p>Urban Infrastructure Project · 18 days</p></div><time>1d</time></div>
+              </div>
+            </article>
+            <article class="panel insight-panel">
+              <div class="ai-title"><span class="ai-spark">✦</span><div><strong>AI portfolio insight</strong><small>Generated from current model signals</small></div></div>
+              <p>Transport projects are showing the strongest concentration of elevated risk. The leading signals are schedule slippage and divergence between planned and achieved physical progress.</p>
+              <button class="btn secondary full" data-page-link="assistant">Ask PAIMANA AI →</button>
+            </article>
+          </div>
+        </section>
+
+        <!-- PROJECTS -->
+        <section class="page" id="page-projects">
+          <div class="page-heading"><div><p class="eyebrow">PROJECT REGISTER</p><h1>All monitored projects</h1><p class="muted">Explore project performance and model-generated risk signals.</p></div><button class="btn primary">＋ Add filter</button></div>
+          <div class="filters"><div class="searchbox">⌕ <input id="projectSearch" placeholder="Search project, state or sector..."></div><select id="projectRisk"><option value="all">All risks</option><option>High</option><option>Medium</option><option>Low</option></select><select id="projectSector"><option value="all">All sectors</option><option>Transport</option><option>Urban Development</option><option>Water Resources</option></select></div>
+          <article class="panel table-panel">
+            <div class="table-scroll"><table><thead><tr><th>PROJECT</th><th>STATE</th><th>SECTOR</th><th>ORIGINAL COST</th><th>CURRENT COST</th><th>PHYSICAL</th><th>FINANCIAL</th><th>RISK</th></tr></thead><tbody id="projectTable"></tbody></table></div>
+          </article>
+        </section>
+
+        <!-- RISK -->
+        <section class="page" id="page-risk">
+          <div class="page-heading"><div><p class="eyebrow">PREDICTIVE ANALYTICS</p><h1>Risk analytics</h1><p class="muted">Understand what is driving predicted cost, schedule and implementation risk.</p></div><div class="data-pill"><span class="live-dot"></span> Model v0.1 · Prototype</div></div>
+          <div class="kpi-grid three"><article class="kpi-card"><div class="kpi-top"><span>Avg. Portfolio Risk</span><span class="kpi-icon">◉</span></div><strong>46.8</strong><small>out of 100</small></article><article class="kpi-card"><div class="kpi-top"><span>Cost Overrun Model</span><span class="kpi-icon">₹</span></div><strong>0.81</strong><small>ROC-AUC · prototype</small></article><article class="kpi-card"><div class="kpi-top"><span>Delay Model</span><span class="kpi-icon">◷</span></div><strong>0.84</strong><small>ROC-AUC · prototype</small></article></div>
+          <div class="grid-2"><article class="panel"><div class="panel-head"><div><h2>Risk score composition</h2><p>Illustrative contribution view</p></div></div><div class="factor-list">
+            <div class="factor"><div><span>Schedule / milestone slippage</span><b>34%</b></div><div class="factor-track"><i style="width:34%"></i></div></div>
+            <div class="factor"><div><span>Physical progress deviation</span><b>27%</b></div><div class="factor-track"><i style="width:27%"></i></div></div>
+            <div class="factor"><div><span>Cost escalation</span><b>21%</b></div><div class="factor-track"><i style="width:21%"></i></div></div>
+            <div class="factor"><div><span>Expenditure pattern</span><b>11%</b></div><div class="factor-track"><i style="width:11%"></i></div></div>
+            <div class="factor"><div><span>Other signals</span><b>7%</b></div><div class="factor-track"><i style="width:7%"></i></div></div>
+          </div></article><article class="panel"><div class="panel-head"><div><h2>Risk trend</h2><p>Illustrative monthly portfolio score</p></div></div><div class="line-chart"><div class="grid-lines"><i></i><i></i><i></i><i></i></div><svg viewBox="0 0 500 180" preserveAspectRatio="none"><polyline points="0,130 70,118 140,126 210,92 280,105 350,75 420,83 500,54"></polyline><circle cx="500" cy="54" r="5"></circle></svg><div class="axis"><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span></div></div></article></div>
+        </section>
+
+        <!-- WARNINGS -->
+        <section class="page" id="page-warnings">
+          <div class="page-heading"><div><p class="eyebrow">INTERVENTION CENTER</p><h1>Early warnings</h1><p class="muted">Prioritized signals that may require project-level attention.</p></div><div class="heading-actions"><button class="btn secondary">Mark reviewed</button><button class="btn primary">Export alerts</button></div></div>
+          <div class="warning-grid">
+            <article class="warning-card critical"><div class="warning-head"><span class="alert-symbol red">!</span><span>CRITICAL</span><time>2 hours ago</time></div><h3>National Highway Project</h3><p>Predicted delay risk increased from <b>73%</b> to <b>87%</b> this cycle.</p><div class="warning-meta"><span>Transport</span><span>Uttar Pradesh</span><strong>87 risk</strong></div></article>
+            <article class="warning-card critical"><div class="warning-head"><span class="alert-symbol red">₹</span><span>CRITICAL</span><time>5 hours ago</time></div><h3>Irrigation Development Project</h3><p>Cost escalation indicators increased following a revised-cost movement.</p><div class="warning-meta"><span>Water Resources</span><span>Rajasthan</span><strong>79 risk</strong></div></article>
+            <article class="warning-card medium"><div class="warning-head"><span class="alert-symbol amber">↗</span><span>ATTENTION</span><time>1 day ago</time></div><h3>Urban Infrastructure Project</h3><p>Milestone slippage is now 18 days beyond the expected trajectory.</p><div class="warning-meta"><span>Urban Development</span><span>Maharashtra</span><strong>56 risk</strong></div></article>
+          </div>
+        </section>
+
+        <!-- ASSISTANT -->
+        <section class="page" id="page-assistant">
+          <div class="page-heading"><div><p class="eyebrow">PROJECT INTELLIGENCE</p><h1>PAIMANA AI Assistant</h1><p class="muted">Ask questions about projects, risks, trends and model signals.</p></div><div class="data-pill"><span class="live-dot"></span> AI service · prototype</div></div>
+          <div class="assistant-layout">
+            <article class="panel chat-panel">
+              <div class="chat-head"><div class="ai-title"><span class="ai-spark">✦</span><div><strong>PAIMANA Intelligence</strong><small>Answers should be grounded in project data</small></div></div><span class="online">● Online</span></div>
+              <div class="messages" id="messages">
+                <div class="message bot"><div class="bot-avatar">✦</div><div><p>Ask me about the monitored portfolio. Try: <b>“Why is National Highway Project high risk?”</b> or <b>“Show high-risk transport projects.”</b></p><time>Just now</time></div></div>
+              </div>
+              <div class="suggestions"><button data-prompt="Why is National Highway Project high risk?">Why is NH Project high risk?</button><button data-prompt="Show high-risk transport projects">High-risk transport</button><button data-prompt="What are the main portfolio risks?">Main portfolio risks</button></div>
+              <form class="chat-input" id="chatForm"><input id="chatInput" placeholder="Ask about projects, risks or trends..." autocomplete="off"><button type="submit">↑</button></form>
+              <p class="prototype-note">Prototype mode: responses currently use local demo project data. Connect the backend AI service for live model-grounded answers.</p>
+            </article>
+            <aside class="panel context-panel"><h2>Current context</h2><p>Assistant responses should be grounded in the selected portfolio and model outputs.</p><div class="context-row"><span>Projects in view</span><strong>1,981</strong></div><div class="context-row"><span>High-risk</span><strong>247</strong></div><div class="context-row"><span>Data period</span><strong>Apr 2026</strong></div><div class="context-row"><span>Model</span><strong>Prototype v0.1</strong></div></aside>
+          </div>
+        </section>
+
+        <!-- REPORTS -->
+        <section class="page" id="page-reports">
+          <div class="page-heading"><div><p class="eyebrow">REPORTING</p><h1>Reports</h1><p class="muted">Generate monitoring snapshots for review and intervention planning.</p></div><button class="btn primary" id="reportBtn">Generate report</button></div>
+          <div class="report-grid"><article class="panel report-card"><span class="report-icon">▥</span><h3>Portfolio Risk Report</h3><p>Risk distribution, top projects and emerging signals.</p><button class="text-btn">Generate →</button></article><article class="panel report-card"><span class="report-icon">₹</span><h3>Cost Risk Report</h3><p>Cost escalation exposure and contributing factors.</p><button class="text-btn">Generate →</button></article><article class="panel report-card"><span class="report-icon">◷</span><h3>Delay Risk Report</h3><p>Schedule risk, milestone slippage and trends.</p><button class="text-btn">Generate →</button></article></div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script src="js/app.js"></script>
+</body>
+</html>
