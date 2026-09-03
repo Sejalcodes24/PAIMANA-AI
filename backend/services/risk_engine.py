@@ -1,8 +1,8 @@
 def calculate_cost_risk(project):
 
     cost_growth = (
-        (project["current_cost"] - project["original_cost"])
-        / project["original_cost"]
+        (project.current_cost - project.original_cost)
+        / project.original_cost
     ) * 100
 
     if cost_growth >= 20:
@@ -20,8 +20,8 @@ def calculate_cost_risk(project):
 def calculate_delay_risk(project):
 
     progress_gap = (
-        project["physical_progress"]
-        - project["financial_progress"]
+        project.physical_progress
+        - project.financial_progress
     )
 
     if progress_gap <= -10:

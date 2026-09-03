@@ -12,7 +12,9 @@ router = APIRouter(
 
 
 @router.get("/")
-def get_projects(db: Session = Depends(get_db)):
+def get_projects(
+    db: Session = Depends(get_db)
+):
 
     projects = db.query(ProjectDB).all()
 
@@ -20,7 +22,10 @@ def get_projects(db: Session = Depends(get_db)):
 
 
 @router.get("/{project_id}")
-def get_project(project_id: int, db: Session = Depends(get_db)):
+def get_project(
+    project_id: int,
+    db: Session = Depends(get_db)
+):
 
     project = (
         db.query(ProjectDB)

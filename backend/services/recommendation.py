@@ -15,8 +15,8 @@ def generate_reasons(project):
     reasons = []
 
     cost_growth = (
-        (project["current_cost"] - project["original_cost"])
-        / project["original_cost"]
+        (project.current_cost - project.original_cost)
+        / project.original_cost
     ) * 100
 
     if cost_growth >= 10:
@@ -25,12 +25,12 @@ def generate_reasons(project):
             "from the original cost."
         )
 
-    if project["financial_progress"] < project["physical_progress"]:
+    if project.financial_progress < project.physical_progress:
         reasons.append(
             "Financial progress is lower than physical progress."
         )
 
-    if project["physical_progress"] < 50:
+    if project.physical_progress < 50:
         reasons.append(
             "Current physical progress is below 50%."
         )
@@ -48,8 +48,8 @@ def generate_recommendations(project):
     recommendations = []
 
     cost_growth = (
-        (project["current_cost"] - project["original_cost"])
-        / project["original_cost"]
+        (project.current_cost - project.original_cost)
+        / project.original_cost
     ) * 100
 
     if cost_growth >= 10:
@@ -57,12 +57,12 @@ def generate_recommendations(project):
             "Review cost escalation and revised project estimates."
         )
 
-    if project["financial_progress"] < project["physical_progress"]:
+    if project.financial_progress < project.physical_progress:
         recommendations.append(
             "Review expenditure efficiency and financial progress."
         )
 
-    if project["physical_progress"] < 50:
+    if project.physical_progress < 50:
         recommendations.append(
             "Monitor contractor performance and project execution closely."
         )

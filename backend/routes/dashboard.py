@@ -1,10 +1,15 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from database import get_db
+from models.project_db import ProjectDB
 
 from services.risk_engine import (
     calculate_cost_risk,
     calculate_delay_risk,
     calculate_overall_risk
 )
+
 
 router = APIRouter(
     prefix="/dashboard",
@@ -17,9 +22,9 @@ router = APIRouter(
 # -------------------------------------------------
 
 @router.get("/overview")
-def dashboard_overview():
+def dashboard_overview(db: Session = Depends(get_db)):
 
-    from main import projects
+    projects = db.query(ProjectDB).all()
 
     total_projects = len(projects)
 
@@ -36,7 +41,6 @@ def dashboard_overview():
         delay_risk = calculate_delay_risk(project)
         overall_risk = calculate_overall_risk(project)
 
-        # Overall risk categories
         if overall_risk >= 75:
             high_risk += 1
 
@@ -46,11 +50,9 @@ def dashboard_overview():
         else:
             low_risk += 1
 
-        # Cost risk
         if cost_risk >= 75:
             cost_risk_projects += 1
 
-        # Delay risk
         if delay_risk >= 75:
             delay_risk_projects += 1
 
@@ -69,9 +71,9 @@ def dashboard_overview():
 # -------------------------------------------------
 
 @router.get("/high-risk")
-def high_risk_projects():
+def high_risk_projects(db: Session = Depends(get_db)):
 
-    from main import projects
+    projects = db.query(ProjectDB).all()
 
     result = []
 
@@ -82,14 +84,13 @@ def high_risk_projects():
         if risk >= 75:
 
             result.append({
-                "project_id": project["project_id"],
-                "project_name": project["project_name"],
-                "state": project["state"],
-                "sector": project["sector"],
+                "project_id": project.project_id,
+                "project_name": project.project_name,
+                "state": project.state,
+                "sector": project.sector,
                 "risk_score": risk
             })
 
-    # Highest risk first
     result.sort(
         key=lambda x: x["risk_score"],
         reverse=True
@@ -103,16 +104,15 @@ def high_risk_projects():
 # -------------------------------------------------
 
 @router.get("/state-risk")
-def state_risk():
+def state_risk(db: Session = Depends(get_db)):
 
-    from main import projects
+    projects = db.query(ProjectDB).all()
 
     state_data = {}
 
     for project in projects:
 
-        state = project["state"]
-
+        state = project.state
         risk = calculate_overall_risk(project)
 
         if state not in state_data:
@@ -146,16 +146,15 @@ def state_risk():
 # -------------------------------------------------
 
 @router.get("/sector-risk")
-def sector_risk():
+def sector_risk(db: Session = Depends(get_db)):
 
-    from main import projects
+    projects = db.query(ProjectDB).all()
 
     sector_data = {}
 
     for project in projects:
 
-        sector = project["sector"]
-
+        sector = project.sector
         risk = calculate_overall_risk(project)
 
         if sector not in sector_data:

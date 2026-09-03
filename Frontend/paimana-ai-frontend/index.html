@@ -21,14 +21,10 @@
 
 <div class="app-shell">
 
-  <!-- ============================= -->
   <!-- SIDEBAR -->
-  <!-- ============================= -->
-
   <aside class="sidebar" id="sidebar">
 
     <div class="brand">
-
       <div class="brand-mark">P</div>
 
       <div>
@@ -40,14 +36,13 @@
           Infrastructure Intelligence
         </div>
       </div>
-
     </div>
 
 
     <nav class="nav">
 
       <div class="nav-label">
-        MONITORING
+        OVERVIEW
       </div>
 
       <button class="nav-item active" data-page="dashboard">
@@ -57,17 +52,52 @@
 
       <button class="nav-item" data-page="projects">
         <span>▤</span>
-        Projects
+        Project Portfolio
+      </button>
+
+      <button class="nav-item" data-page="progress">
+        <span>◫</span>
+        Project Progress
+      </button>
+
+
+      <div class="nav-label">
+        PROJECT ANALYSIS
+      </div>
+
+      <button class="nav-item" data-page="cost">
+        <span>₹</span>
+        Cost &amp; Expenditure
+      </button>
+
+      <button class="nav-item" data-page="schedule">
+        <span>◷</span>
+        Schedule &amp; Delays
       </button>
 
       <button class="nav-item" data-page="risk">
         <span>◉</span>
-        Risk Analytics
+        Risk Analysis
       </button>
+
+      <button class="nav-item" data-page="historical">
+        <span>↺</span>
+        Historical Trends
+      </button>
+
+
+      <div class="nav-label">
+        MONITORING
+      </div>
 
       <button class="nav-item" data-page="warnings">
         <span>⚠</span>
         Early Warnings
+      </button>
+
+      <button class="nav-item" data-page="sector">
+        <span>▥</span>
+        Sector Analysis
       </button>
 
 
@@ -81,7 +111,7 @@
       </button>
 
       <button class="nav-item" data-page="reports">
-        <span>▥</span>
+        <span>⇩</span>
         Reports
       </button>
 
@@ -91,16 +121,13 @@
     <div class="sidebar-bottom">
 
       <div class="system-status">
-
         <span class="status-dot"></span>
 
         <div>
           <strong>Systems operational</strong>
           <small>PAIMANA data services</small>
         </div>
-
       </div>
-
 
       <div class="user-card">
 
@@ -113,10 +140,6 @@
           <small>Monitoring access</small>
         </div>
 
-        <span class="chevron">
-          ⌄
-        </span>
-
       </div>
 
     </div>
@@ -124,73 +147,51 @@
   </aside>
 
 
-  <!-- ============================= -->
   <!-- MAIN -->
-  <!-- ============================= -->
-
   <main class="main">
 
     <!-- TOP BAR -->
-
     <header class="topbar">
 
       <button class="mobile-menu" id="mobileMenu">
         ☰
       </button>
 
-
       <div class="breadcrumb">
-
         <span>PAIMANA</span>
-
         <b>/</b>
-
         <strong id="pageCrumb">
           Dashboard
         </strong>
-
       </div>
 
 
       <div class="top-actions">
 
         <div class="data-pill">
-
           <span class="live-dot"></span>
-
-          Data refreshed
-
+          Backend
           <strong id="dataDate">
-            Live
+            Connecting...
           </strong>
-
         </div>
-
 
         <button
           class="icon-btn"
-          title="Notifications"
           id="notifyBtn"
+          title="Open early warnings"
         >
-          ♢
-
+          ⚠
           <span class="notification-dot"></span>
-
         </button>
 
-
         <div class="profile-mini">
-
           <div class="avatar">
             AD
           </div>
-
           <span>
             Administrator
           </span>
-
-          ⌄
-
         </div>
 
       </div>
@@ -200,17 +201,11 @@
 
     <div class="content">
 
-
-      <!-- ===================================================== -->
       <!-- DASHBOARD -->
-      <!-- ===================================================== -->
-
       <section
         class="page active"
         id="page-dashboard"
       >
-
-        <!-- PAGE HEADING -->
 
         <div class="page-heading">
 
@@ -225,7 +220,7 @@
             </h1>
 
             <p class="muted">
-              A predictive view of project performance, risk and emerging intervention needs.
+              Predictive view of project performance, cost, schedule and emerging intervention needs.
             </p>
 
           </div>
@@ -252,150 +247,35 @@
         </div>
 
 
-        <!-- FILTERS -->
-
-        <div class="filters">
-
-          <div class="filter-title">
-            FILTERS
-          </div>
-
-
-          <select id="ministryFilter">
-
-            <option value="all">
-              All Ministries
-            </option>
-
-            <option value="MoRTH">
-              Road Transport
-            </option>
-
-            <option value="MoHUA">
-              Urban Development
-            </option>
-
-            <option value="Water">
-              Water Resources
-            </option>
-
-          </select>
-
-
-          <select id="sectorFilter">
-
-            <option value="all">
-              All Sectors
-            </option>
-
-            <option>
-              Transport
-            </option>
-
-            <option>
-              Urban Development
-            </option>
-
-            <option>
-              Water Resources
-            </option>
-
-            <option>
-              Energy
-            </option>
-
-          </select>
-
-
-          <select id="riskFilter">
-
-            <option value="all">
-              All Risk Levels
-            </option>
-
-            <option value="High">
-              High Risk
-            </option>
-
-            <option value="Medium">
-              Medium Risk
-            </option>
-
-            <option value="Low">
-              Low Risk
-            </option>
-
-          </select>
-
-
-          <select id="stateFilter">
-
-            <option value="all">
-              All States
-            </option>
-
-            <option>
-              Uttar Pradesh
-            </option>
-
-            <option>
-              Maharashtra
-            </option>
-
-            <option>
-              Rajasthan
-            </option>
-
-          </select>
-
-
-          <button
-            class="filter-reset"
-            id="resetFilters"
-          >
-            Reset
-          </button>
-
-        </div>
-
-
         <!-- KPI CARDS -->
-
         <div class="kpi-grid">
-
 
           <article class="kpi-card">
 
             <div class="kpi-top">
-
               <span>
-                Total Projects
+                Monitored Projects
               </span>
 
               <span class="kpi-icon">
                 ▤
               </span>
-
             </div>
 
-
             <strong id="totalProjects">
-              0
+              —
             </strong>
 
-
             <small>
-              Currently monitored
+              Current project portfolio
             </small>
 
           </article>
 
 
-
           <article class="kpi-card danger">
 
             <div class="kpi-top">
-
               <span>
                 High Risk Projects
               </span>
@@ -403,55 +283,45 @@
               <span class="kpi-icon">
                 ⚠
               </span>
-
             </div>
 
-
             <strong id="highRisk">
-              0
+              —
             </strong>
 
-
             <small>
-              Require attention
+              Projects requiring attention
             </small>
 
           </article>
-
 
 
           <article class="kpi-card amber">
 
             <div class="kpi-top">
-
               <span>
-                Cost Risk Exposure
+                Current Cost
               </span>
 
               <span class="kpi-icon">
                 ₹
               </span>
-
             </div>
 
-
             <strong id="costExposure">
-              ₹0 Cr
+              —
             </strong>
 
-
             <small>
-              Current cost exposure
+              Total current project cost
             </small>
 
           </article>
 
 
-
           <article class="kpi-card blue">
 
             <div class="kpi-top">
-
               <span>
                 Delay Risk
               </span>
@@ -459,17 +329,37 @@
               <span class="kpi-icon">
                 ◷
               </span>
-
             </div>
 
-
             <strong id="delayRisk">
-              0
+              —
             </strong>
 
+            <small>
+              Projects with elevated delay risk
+            </small>
+
+          </article>
+
+
+          <article class="kpi-card">
+
+            <div class="kpi-top">
+              <span>
+                Avg Physical Progress
+              </span>
+
+              <span class="kpi-icon">
+                ◫
+              </span>
+            </div>
+
+            <strong id="avgProgress">
+              —
+            </strong>
 
             <small>
-              Projects with high delay risk
+              Across current projects
             </small>
 
           </article>
@@ -477,17 +367,11 @@
         </div>
 
 
-
-        <!-- ================================================= -->
         <!-- CHARTS -->
-        <!-- ================================================= -->
-
         <div class="grid-2">
 
-
           <!-- RISK DISTRIBUTION -->
-
-          <article class="panel chart-panel">
+          <article class="panel">
 
             <div class="panel-head">
 
@@ -498,20 +382,15 @@
                 </h2>
 
                 <p>
-                  Current model classification across monitored projects
+                  Current model classification
                 </p>
 
               </div>
-
-              <button class="more-btn">
-                •••
-              </button>
 
             </div>
 
 
             <div class="risk-chart-wrap">
-
 
               <div
                 class="donut"
@@ -533,10 +412,7 @@
               </div>
 
 
-              <div
-                class="legend"
-                id="riskLegend"
-              >
+              <div class="legend">
 
                 <div>
 
@@ -547,7 +423,6 @@
                   </span>
 
                   <strong>
-
                     <span id="highRiskCount">
                       0
                     </span>
@@ -555,7 +430,6 @@
                     <small id="highRiskPercent">
                       0%
                     </small>
-
                   </strong>
 
                 </div>
@@ -570,7 +444,6 @@
                   </span>
 
                   <strong>
-
                     <span id="mediumRiskCount">
                       0
                     </span>
@@ -578,7 +451,6 @@
                     <small id="mediumRiskPercent">
                       0%
                     </small>
-
                   </strong>
 
                 </div>
@@ -593,7 +465,6 @@
                   </span>
 
                   <strong>
-
                     <span id="lowRiskCount">
                       0
                     </span>
@@ -601,7 +472,6 @@
                     <small id="lowRiskPercent">
                       0%
                     </small>
-
                   </strong>
 
                 </div>
@@ -613,11 +483,8 @@
           </article>
 
 
-
           <!-- RISK BY SECTOR -->
-
-          <article class="panel chart-panel">
-
+          <article class="panel">
 
             <div class="panel-head">
 
@@ -644,11 +511,11 @@
                 </option>
 
                 <option value="delay">
-                  Delay
+                  Delay risk
                 </option>
 
                 <option value="cost">
-                  Cost
+                  Cost risk
                 </option>
 
               </select>
@@ -659,22 +526,14 @@
             <div
               class="bars"
               id="sectorBars"
-            >
-
-              <!-- JavaScript will insert sector bars here -->
-
-            </div>
+            ></div>
 
           </article>
 
         </div>
 
 
-
-        <!-- ================================================= -->
         <!-- PROJECTS REQUIRING ATTENTION -->
-        <!-- ================================================= -->
-
         <div class="section-head">
 
           <div>
@@ -688,7 +547,6 @@
             </p>
 
           </div>
-
 
           <button
             class="text-btn"
@@ -709,43 +567,18 @@
               <thead>
 
                 <tr>
-
-                  <th>
-                    PROJECT
-                  </th>
-
-                  <th>
-                    SECTOR
-                  </th>
-
-                  <th>
-                    STATE
-                  </th>
-
-                  <th>
-                    OVERALL RISK
-                  </th>
-
-                  <th>
-                    COST RISK
-                  </th>
-
-                  <th>
-                    DELAY RISK
-                  </th>
-
-                  <th>
-                    STATUS
-                  </th>
-
+                  <th>PROJECT</th>
+                  <th>SECTOR</th>
+                  <th>STATE</th>
+                  <th>OVERALL RISK</th>
+                  <th>COST RISK</th>
+                  <th>DELAY RISK</th>
+                  <th>STATUS</th>
                 </tr>
 
               </thead>
 
-
-              <tbody id="riskTable">
-
-              </tbody>
+              <tbody id="riskTable"></tbody>
 
             </table>
 
@@ -754,13 +587,8 @@
         </article>
 
 
-
-        <!-- ================================================= -->
-        <!-- EARLY WARNINGS + AI INSIGHT -->
-        <!-- ================================================= -->
-
+        <!-- WARNINGS + AI -->
         <div class="grid-2 lower">
-
 
           <article class="panel alert-panel">
 
@@ -773,11 +601,10 @@
                 </h2>
 
                 <p>
-                  Signals detected from current project data
+                  Signals from current project data
                 </p>
 
               </div>
-
 
               <button
                 class="text-btn"
@@ -792,18 +619,12 @@
             <div
               class="alert-list"
               id="dashboardWarnings"
-            >
-
-              <!-- JavaScript will generate warnings -->
-
-            </div>
+            ></div>
 
           </article>
 
 
-
           <article class="panel insight-panel">
-
 
             <div class="ai-title">
 
@@ -814,11 +635,11 @@
               <div>
 
                 <strong>
-                  PAIMANA portfolio insight
+                  AI portfolio insight
                 </strong>
 
                 <small>
-                  Generated from current project risk signals
+                  Generated from loaded project signals
                 </small>
 
               </div>
@@ -827,9 +648,7 @@
 
 
             <p id="portfolioInsight">
-
-              Loading portfolio insights from backend data...
-
+              Loading portfolio insight...
             </p>
 
 
@@ -847,11 +666,7 @@
       </section>
 
 
-
-      <!-- ===================================================== -->
-      <!-- PROJECTS -->
-      <!-- ===================================================== -->
-
+      <!-- PROJECT PORTFOLIO -->
       <section
         class="page"
         id="page-projects"
@@ -866,54 +681,45 @@
             </p>
 
             <h1>
-              All monitored projects
+              Project portfolio
             </h1>
 
             <p class="muted">
-              Explore project performance and model-generated risk signals.
+              Explore monitored infrastructure projects and their model-generated risk signals.
             </p>
 
           </div>
-
-
-          <button class="btn primary">
-            ＋ Add filter
-          </button>
 
         </div>
 
 
         <div class="filters">
 
-
           <div class="searchbox">
-
             ⌕
-
             <input
               id="projectSearch"
               placeholder="Search project, state or sector..."
             >
-
           </div>
 
 
           <select id="projectRisk">
 
             <option value="all">
-              All risks
+              All Risk Levels
             </option>
 
-            <option>
-              High
+            <option value="High">
+              High Risk
             </option>
 
-            <option>
-              Medium
+            <option value="Medium">
+              Medium Risk
             </option>
 
-            <option>
-              Low
+            <option value="Low">
+              Low Risk
             </option>
 
           </select>
@@ -922,23 +728,727 @@
           <select id="projectSector">
 
             <option value="all">
-              All sectors
+              All Sectors
             </option>
 
-            <option>
-              Transport
-            </option>
+          </select>
 
-            <option>
-              Urban Development
-            </option>
 
-            <option>
-              Water Resources
-            </option>
+          <button
+            class="filter-reset"
+            id="projectReset"
+          >
+            Reset
+          </button>
 
-            <option>
-              Energy
+        </div>
+
+
+        <article class="panel table-panel">
+
+          <div class="table-scroll">
+
+            <table>
+
+              <thead>
+
+                <tr>
+                  <th>PROJECT</th>
+                  <th>STATE</th>
+                  <th>SECTOR</th>
+                  <th>ORIGINAL COST</th>
+                  <th>CURRENT COST</th>
+                  <th>PHYSICAL</th>
+                  <th>FINANCIAL</th>
+                  <th>RISK</th>
+                </tr>
+
+              </thead>
+
+              <tbody id="projectTable"></tbody>
+
+            </table>
+
+          </div>
+
+        </article>
+
+      </section>
+
+
+      <!-- PROJECT PROGRESS -->
+      <section
+        class="page"
+        id="page-progress"
+      >
+
+        <div class="page-heading">
+
+          <div>
+
+            <p class="eyebrow">
+              PROJECT PERFORMANCE
+            </p>
+
+            <h1>
+              Project progress
+            </h1>
+
+            <p class="muted">
+              Compare physical progress with financial expenditure and identify execution gaps.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="metric-grid">
+
+          <article class="metric-card">
+            <span>
+              Average physical progress
+            </span>
+
+            <strong id="progressPhysical">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              Average financial progress
+            </span>
+
+            <strong id="progressFinancial">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              Projects below 50%
+            </span>
+
+            <strong id="progressBelow">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              Largest progress gap
+            </span>
+
+            <strong id="progressGap">
+              —
+            </strong>
+          </article>
+
+        </div>
+
+
+        <div class="grid-2">
+
+          <article class="panel">
+
+            <div class="panel-head">
+
+              <div>
+
+                <h2>
+                  Progress distribution
+                </h2>
+
+                <p>
+                  Current physical progress bands
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div
+              class="bars"
+              id="progressBars"
+            ></div>
+
+          </article>
+
+
+          <article class="panel">
+
+            <div class="panel-head">
+
+              <div>
+
+                <h2>
+                  Largest execution gaps
+                </h2>
+
+                <p>
+                  Difference between physical and financial progress
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div
+              class="mini-list"
+              id="progressGapList"
+            ></div>
+
+          </article>
+
+        </div>
+
+      </section>
+
+
+      <!-- COST -->
+      <section
+        class="page"
+        id="page-cost"
+      >
+
+        <div class="page-heading">
+
+          <div>
+
+            <p class="eyebrow">
+              FINANCIAL MONITORING
+            </p>
+
+            <h1>
+              Cost &amp; expenditure
+            </h1>
+
+            <p class="muted">
+              Track original cost, current cost and financial execution across the portfolio.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="metric-grid">
+
+          <article class="metric-card">
+            <span>
+              Total original cost
+            </span>
+
+            <strong id="originalCostTotal">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              Total current cost
+            </span>
+
+            <strong id="currentCostTotal">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              Cost increase
+            </span>
+
+            <strong id="costIncrease">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              Average cost movement
+            </span>
+
+            <strong id="avgCostMovement">
+              —
+            </strong>
+          </article>
+
+        </div>
+
+
+        <article class="panel table-panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <h2>
+                Largest cost movements
+              </h2>
+
+              <p>
+                Projects with the highest current cost compared with original cost
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div class="table-scroll">
+
+            <table>
+
+              <thead>
+
+                <tr>
+                  <th>PROJECT</th>
+                  <th>SECTOR</th>
+                  <th>ORIGINAL</th>
+                  <th>CURRENT</th>
+                  <th>CHANGE</th>
+                  <th>FINANCIAL PROGRESS</th>
+                </tr>
+
+              </thead>
+
+              <tbody id="costTable"></tbody>
+
+            </table>
+
+          </div>
+
+        </article>
+
+      </section>
+
+
+      <!-- SCHEDULE -->
+      <section
+        class="page"
+        id="page-schedule"
+      >
+
+        <div class="page-heading">
+
+          <div>
+
+            <p class="eyebrow">
+              SCHEDULE MONITORING
+            </p>
+
+            <h1>
+              Schedule &amp; delays
+            </h1>
+
+            <p class="muted">
+              Identify projects where model signals indicate elevated implementation or delay risk.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="metric-grid">
+
+          <article class="metric-card">
+            <span>
+              High delay risk
+            </span>
+
+            <strong id="scheduleHigh">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              Average delay risk
+            </span>
+
+            <strong id="scheduleAvg">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              High overall risk
+            </span>
+
+            <strong id="scheduleOverallHigh">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              Low physical progress
+            </span>
+
+            <strong id="scheduleLowProgress">
+              —
+            </strong>
+          </article>
+
+        </div>
+
+
+        <article class="panel table-panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <h2>
+                Projects with elevated delay signals
+              </h2>
+
+              <p>
+                Sorted by calculated delay risk
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div class="table-scroll">
+
+            <table>
+
+              <thead>
+
+                <tr>
+                  <th>PROJECT</th>
+                  <th>SECTOR</th>
+                  <th>STATE</th>
+                  <th>DELAY RISK</th>
+                  <th>PHYSICAL</th>
+                  <th>OVERALL RISK</th>
+                </tr>
+
+              </thead>
+
+              <tbody id="scheduleTable"></tbody>
+
+            </table>
+
+          </div>
+
+        </article>
+
+      </section>
+
+
+      <!-- RISK -->
+      <section
+        class="page"
+        id="page-risk"
+      >
+
+        <div class="page-heading">
+
+          <div>
+
+            <p class="eyebrow">
+              PREDICTIVE ANALYTICS
+            </p>
+
+            <h1>
+              Risk analysis
+            </h1>
+
+            <p class="muted">
+              Understand overall, cost and delay risk signals across the current portfolio.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="metric-grid">
+
+          <article class="metric-card">
+            <span>
+              Average portfolio risk
+            </span>
+
+            <strong id="avgPortfolioRisk">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              Average cost risk
+            </span>
+
+            <strong id="avgCostRisk">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              Average delay risk
+            </span>
+
+            <strong id="avgDelayRisk">
+              —
+            </strong>
+          </article>
+
+
+          <article class="metric-card">
+            <span>
+              High-risk projects
+            </span>
+
+            <strong id="riskHighCount">
+              —
+            </strong>
+          </article>
+
+        </div>
+
+
+        <div class="grid-2">
+
+          <article class="panel">
+
+            <div class="panel-head">
+
+              <div>
+
+                <h2>
+                  Risk concentration by sector
+                </h2>
+
+                <p>
+                  Average risk score for current projects
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div
+              class="bars"
+              id="riskSectorBars"
+            ></div>
+
+          </article>
+
+
+          <article class="panel">
+
+            <div class="panel-head">
+
+              <div>
+
+                <h2>
+                  Risk drivers
+                </h2>
+
+                <p>
+                  Portfolio-level signals requiring attention
+                </p>
+
+              </div>
+
+            </div>
+
+
+            <div
+              class="factor-list"
+              id="factorList"
+            ></div>
+
+          </article>
+
+        </div>
+
+
+        <article class="panel table-panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <h2>
+                Highest-risk projects
+              </h2>
+
+              <p>
+                Top current model scores
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div class="table-scroll">
+
+            <table>
+
+              <thead>
+
+                <tr>
+                  <th>PROJECT</th>
+                  <th>SECTOR</th>
+                  <th>STATE</th>
+                  <th>OVERALL</th>
+                  <th>COST</th>
+                  <th>DELAY</th>
+                </tr>
+
+              </thead>
+
+              <tbody id="riskSummary"></tbody>
+
+            </table>
+
+          </div>
+
+        </article>
+
+      </section>
+
+
+      <!-- HISTORICAL -->
+      <section
+        class="page"
+        id="page-historical"
+      >
+
+        <div class="page-heading">
+
+          <div>
+
+            <p class="eyebrow">
+              HISTORICAL PROJECT DATA
+            </p>
+
+            <h1>
+              Historical trends
+            </h1>
+
+            <p class="muted">
+              Use historical infrastructure records for benchmarking, trend analysis and model learning.
+            </p>
+
+          </div>
+
+
+          <div class="data-pill">
+
+            <span class="live-dot"></span>
+
+            <strong id="historicalCount">
+              0
+            </strong>
+
+            records loaded
+
+          </div>
+
+        </div>
+
+
+        <div class="metric-grid">
+
+          <article class="metric-card">
+
+            <span>
+              Historical records
+            </span>
+
+            <strong id="histRecords">
+              —
+            </strong>
+
+          </article>
+
+
+          <article class="metric-card">
+
+            <span>
+              Average cost overrun
+            </span>
+
+            <strong id="histAvgOverrun">
+              —
+            </strong>
+
+          </article>
+
+
+          <article class="metric-card">
+
+            <span>
+              Projects with cost increase
+            </span>
+
+            <strong id="histOverrunCount">
+              —
+            </strong>
+
+          </article>
+
+
+          <article class="metric-card">
+
+            <span>
+              Top historical sector
+            </span>
+
+            <strong id="histTopSector">
+              —
+            </strong>
+
+          </article>
+
+        </div>
+
+
+        <div class="filters">
+
+          <div class="searchbox">
+
+            ⌕
+
+            <input
+              id="historicalSearch"
+              placeholder="Search historical project, ministry or agency..."
+            >
+
+          </div>
+
+
+          <select id="historicalSector">
+
+            <option value="all">
+              All Sectors
             </option>
 
           </select>
@@ -955,49 +1465,46 @@
               <thead>
 
                 <tr>
-
-                  <th>
-                    PROJECT
-                  </th>
-
-                  <th>
-                    STATE
-                  </th>
-
-                  <th>
-                    SECTOR
-                  </th>
-
-                  <th>
-                    ORIGINAL COST
-                  </th>
-
-                  <th>
-                    CURRENT COST
-                  </th>
-
-                  <th>
-                    PHYSICAL
-                  </th>
-
-                  <th>
-                    FINANCIAL
-                  </th>
-
-                  <th>
-                    RISK
-                  </th>
-
+                  <th>PROJECT</th>
+                  <th>CODE</th>
+                  <th>SECTOR</th>
+                  <th>MINISTRY</th>
+                  <th>AGENCY</th>
+                  <th>ORIGINAL COST</th>
+                  <th>REVISED COST</th>
+                  <th>EXPENDITURE</th>
+                  <th>PHYSICAL</th>
+                  <th>COST OVERRUN</th>
                 </tr>
 
               </thead>
 
-
-              <tbody id="projectTable">
-
-              </tbody>
+              <tbody id="historicalTable"></tbody>
 
             </table>
+
+          </div>
+
+
+          <div class="pagination">
+
+            <button
+              class="btn secondary"
+              id="histPrev"
+            >
+              ← Previous
+            </button>
+
+            <span id="histPageInfo">
+              Page 1
+            </span>
+
+            <button
+              class="btn secondary"
+              id="histNext"
+            >
+              Next →
+            </button>
 
           </div>
 
@@ -1006,255 +1513,7 @@
       </section>
 
 
-
-      <!-- ===================================================== -->
-      <!-- RISK ANALYTICS -->
-      <!-- ===================================================== -->
-
-      <section
-        class="page"
-        id="page-risk"
-      >
-
-
-        <div class="page-heading">
-
-          <div>
-
-            <p class="eyebrow">
-              PREDICTIVE ANALYTICS
-            </p>
-
-            <h1>
-              Risk analytics
-            </h1>
-
-            <p class="muted">
-              Understand what is driving predicted cost, schedule and implementation risk.
-            </p>
-
-          </div>
-
-
-          <div class="data-pill">
-
-            <span class="live-dot"></span>
-
-            Backend risk engine · Active
-
-          </div>
-
-        </div>
-
-
-
-        <div class="kpi-grid three">
-
-
-          <article class="kpi-card">
-
-            <div class="kpi-top">
-
-              <span>
-                Avg. Portfolio Risk
-              </span>
-
-              <span class="kpi-icon">
-                ◉
-              </span>
-
-            </div>
-
-            <strong id="avgPortfolioRisk">
-              0
-            </strong>
-
-            <small>
-              out of 100
-            </small>
-
-          </article>
-
-
-
-          <article class="kpi-card">
-
-            <div class="kpi-top">
-
-              <span>
-                Average Cost Risk
-              </span>
-
-              <span class="kpi-icon">
-                ₹
-              </span>
-
-            </div>
-
-            <strong id="avgCostRisk">
-              0
-            </strong>
-
-            <small>
-              backend risk score
-            </small>
-
-          </article>
-
-
-
-          <article class="kpi-card">
-
-            <div class="kpi-top">
-
-              <span>
-                Average Delay Risk
-              </span>
-
-              <span class="kpi-icon">
-                ◷
-              </span>
-
-            </div>
-
-            <strong id="avgDelayRisk">
-              0
-            </strong>
-
-            <small>
-              backend risk score
-            </small>
-
-          </article>
-
-        </div>
-
-
-
-        <div class="grid-2">
-
-
-          <article class="panel">
-
-            <div class="panel-head">
-
-              <div>
-
-                <h2>
-                  Risk score composition
-                </h2>
-
-                <p>
-                  Current backend risk indicators
-                </p>
-
-              </div>
-
-            </div>
-
-
-            <div
-              class="factor-list"
-              id="riskFactors"
-            >
-
-              <div class="factor">
-
-                <div>
-
-                  <span>
-                    Cost escalation
-                  </span>
-
-                  <b id="factorCost">
-                    0%
-                  </b>
-
-                </div>
-
-                <div class="factor-track">
-
-                  <i
-                    id="factorCostBar"
-                    style="width:0%"
-                  ></i>
-
-                </div>
-
-              </div>
-
-
-              <div class="factor">
-
-                <div>
-
-                  <span>
-                    Physical / financial progress gap
-                  </span>
-
-                  <b id="factorProgress">
-                    0%
-                  </b>
-
-                </div>
-
-                <div class="factor-track">
-
-                  <i
-                    id="factorProgressBar"
-                    style="width:0%"
-                  ></i>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          </article>
-
-
-
-          <article class="panel">
-
-            <div class="panel-head">
-
-              <div>
-
-                <h2>
-                  Project risk summary
-                </h2>
-
-                <p>
-                  Risk calculated by the backend engine
-                </p>
-
-              </div>
-
-            </div>
-
-
-            <div
-              id="riskSummary"
-              class="alert-list"
-            >
-
-              Loading...
-
-            </div>
-
-          </article>
-
-        </div>
-
-      </section>
-
-
-
-      <!-- ===================================================== -->
       <!-- EARLY WARNINGS -->
-      <!-- ===================================================== -->
-
       <section
         class="page"
         id="page-warnings"
@@ -1273,21 +1532,8 @@
             </h1>
 
             <p class="muted">
-              Risk signals derived from current project data.
+              Prioritized signals that may require project-level attention.
             </p>
-
-          </div>
-
-
-          <div class="heading-actions">
-
-            <button class="btn secondary">
-              Mark reviewed
-            </button>
-
-            <button class="btn primary">
-              Export alerts
-            </button>
 
           </div>
 
@@ -1297,20 +1543,69 @@
         <div
           class="warning-grid"
           id="warningGrid"
-        >
-
-          <!-- JavaScript will generate warning cards -->
-
-        </div>
+        ></div>
 
       </section>
 
 
+      <!-- SECTOR -->
+      <section
+        class="page"
+        id="page-sector"
+      >
 
-      <!-- ===================================================== -->
+        <div class="page-heading">
+
+          <div>
+
+            <p class="eyebrow">
+              PORTFOLIO BREAKDOWN
+            </p>
+
+            <h1>
+              Sector analysis
+            </h1>
+
+            <p class="muted">
+              Compare project volume, cost and risk concentration across infrastructure sectors.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <article class="panel table-panel">
+
+          <div class="table-scroll">
+
+            <table>
+
+              <thead>
+
+                <tr>
+                  <th>SECTOR</th>
+                  <th>PROJECTS</th>
+                  <th>PORTFOLIO SHARE</th>
+                  <th>AVG RISK</th>
+                  <th>HIGH RISK</th>
+                  <th>CURRENT COST</th>
+                </tr>
+
+              </thead>
+
+              <tbody id="sectorTable"></tbody>
+
+            </table>
+
+          </div>
+
+        </article>
+
+      </section>
+
+
       <!-- AI ASSISTANT -->
-      <!-- ===================================================== -->
-
       <section
         class="page"
         id="page-assistant"
@@ -1329,7 +1624,7 @@
             </h1>
 
             <p class="muted">
-              Ask questions about projects, risks, trends and model signals.
+              Ask questions about projects, risks, cost movement, progress and trends.
             </p>
 
           </div>
@@ -1339,7 +1634,7 @@
 
             <span class="live-dot"></span>
 
-            Backend data · Connected
+            Data grounded
 
           </div>
 
@@ -1348,12 +1643,9 @@
 
         <div class="assistant-layout">
 
-
           <article class="panel chat-panel">
 
-
             <div class="chat-head">
-
 
               <div class="ai-title">
 
@@ -1368,7 +1660,7 @@
                   </strong>
 
                   <small>
-                    Answers grounded in current project data
+                    Answers generated from loaded project data
                   </small>
 
                 </div>
@@ -1397,7 +1689,7 @@
                 <div>
 
                   <p>
-                    Ask me about the monitored projects, risk scores, cost escalation or delay indicators.
+                    Ask me about project risk, cost escalation, delay signals, sectors or portfolio trends.
                   </p>
 
                   <time>
@@ -1419,13 +1711,11 @@
                 Highest risk projects
               </button>
 
-
               <button
                 data-prompt="Show high-risk transport projects"
               >
                 High-risk transport
               </button>
-
 
               <button
                 data-prompt="What are the main portfolio risks?"
@@ -1447,43 +1737,34 @@
                 autocomplete="off"
               >
 
-
               <button type="submit">
                 ↑
               </button>
 
             </form>
 
-
-            <p class="prototype-note">
-              Prototype mode: responses are generated from the currently loaded backend project data.
-            </p>
-
           </article>
 
 
-
           <aside class="panel context-panel">
-
 
             <h2>
               Current context
             </h2>
 
-
             <p>
-              Current project information loaded from the PAIMANA backend.
+              Assistant context is derived from the current PAIMANA project portfolio.
             </p>
 
 
             <div class="context-row">
 
               <span>
-                Projects in view
+                Current projects
               </span>
 
-              <strong id="contextProjects">
-                0
+              <strong id="aiProjects">
+                —
               </strong>
 
             </div>
@@ -1492,11 +1773,11 @@
             <div class="context-row">
 
               <span>
-                High-risk
+                High risk
               </span>
 
-              <strong id="contextHighRisk">
-                0
+              <strong id="aiHighRisk">
+                —
               </strong>
 
             </div>
@@ -1505,24 +1786,24 @@
             <div class="context-row">
 
               <span>
-                Data source
+                Historical records
+              </span>
+
+              <strong id="aiHistorical">
+                —
+              </strong>
+
+            </div>
+
+
+            <div class="context-row">
+
+              <span>
+                Backend
               </span>
 
               <strong>
-                FastAPI
-              </strong>
-
-            </div>
-
-
-            <div class="context-row">
-
-              <span>
-                Risk engine
-              </span>
-
-              <strong>
-                Active
+                Connected
               </strong>
 
             </div>
@@ -1534,11 +1815,7 @@
       </section>
 
 
-
-      <!-- ===================================================== -->
       <!-- REPORTS -->
-      <!-- ===================================================== -->
-
       <section
         class="page"
         id="page-reports"
@@ -1557,7 +1834,7 @@
             </h1>
 
             <p class="muted">
-              Generate monitoring snapshots for review and intervention planning.
+              Generate data snapshots for review, intervention planning and presentations.
             </p>
 
           </div>
@@ -1575,27 +1852,28 @@
 
         <div class="report-grid">
 
-
           <article class="panel report-card">
 
             <span class="report-icon">
-              ▥
+              ◉
             </span>
 
             <h3>
-              Portfolio Risk Report
+              Portfolio Risk Snapshot
             </h3>
 
             <p>
-              Risk distribution, top projects and current risk signals.
+              Current risk distribution, high-risk projects and sector concentration.
             </p>
 
-            <button class="text-btn">
+            <button
+              class="text-btn report-action"
+              data-report="risk"
+            >
               Generate →
             </button>
 
           </article>
-
 
 
           <article class="panel report-card">
@@ -1605,19 +1883,21 @@
             </span>
 
             <h3>
-              Cost Risk Report
+              Cost Monitoring Snapshot
             </h3>
 
             <p>
-              Cost escalation exposure and backend cost-risk indicators.
+              Original cost, current cost and project-level cost movement.
             </p>
 
-            <button class="text-btn">
+            <button
+              class="text-btn report-action"
+              data-report="cost"
+            >
               Generate →
             </button>
 
           </article>
-
 
 
           <article class="panel report-card">
@@ -1627,24 +1907,49 @@
             </span>
 
             <h3>
-              Delay Risk Report
+              Schedule Monitoring Snapshot
             </h3>
 
             <p>
-              Delay risk, progress gaps and project execution indicators.
+              Delay risk, progress gaps and projects needing attention.
             </p>
 
-            <button class="text-btn">
+            <button
+              class="text-btn report-action"
+              data-report="schedule"
+            >
               Generate →
             </button>
 
           </article>
 
 
+          <article class="panel report-card">
+
+            <span class="report-icon">
+              ↺
+            </span>
+
+            <h3>
+              Historical Data Export
+            </h3>
+
+            <p>
+              Export the loaded historical project records for analysis.
+            </p>
+
+            <button
+              class="text-btn report-action"
+              data-report="historical"
+            >
+              Export →
+            </button>
+
+          </article>
+
         </div>
 
       </section>
-
 
     </div>
 
@@ -1652,8 +1957,6 @@
 
 </div>
 
-
-<!-- TOAST -->
 
 <div
   class="toast"
