@@ -1,3234 +1,2010 @@
-const API_BASE = "http://127.0.0.1:8000";
-
-const CURRENT_SNAPSHOT = "July 2026";
-const HIST_PAGE_SIZE = 25;
-
-let projects = [];
-let historicalProjects = [];
-
-let historicalFiltered = [];
-let historicalPage = 1;
+const API_BASE =
+  window.PAIMANA_API_BASE ||
+  "http://127.0.0.1:8000";
 
 
-// =====================================================
-// BASIC HELPERS
-// =====================================================
-
-const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => document.querySelectorAll(selector);
+const GEOJSON_URL =
+  "https://cdn.jsdelivr.net/gh/udit-001/india-maps-data@2884453/geojson/india.geojson";
 
 
-const pageNames = {
 
-  dashboard: "Dashboard",
+/* =====================================================
+   MONTH CONFIG
+===================================================== */
 
-  projects: "Project Portfolio",
+const MONTH_LABELS = {
 
-  progress: "Project Progress",
+  Jan_2026: "January 2026",
 
-  cost: "Cost & Expenditure",
+  Feb_2026: "February 2026",
 
-  schedule: "Schedule & Delays",
+  March_2026: "March 2026",
 
-  risk: "Risk Analysis",
+  April_2026: "April 2026",
 
-  historical: "Historical Trends",
+  May_2026: "May 2026",
 
-  warnings: "Early Warnings",
+  June_2026: "June 2026",
 
-  sector: "Sector Analysis",
-
-  assistant: "AI Assistant",
-
-  reports: "Reports"
+  July_2026: "July 2026"
 
 };
 
 
-function num(value) {
 
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return 0;
-  }
+let months = [];
 
-  const n = Number(
-    String(value).replace(/,/g, "")
-  );
+let currentMonth = "";
 
-  return Number.isFinite(n) ? n : 0;
-}
+let allRows = [];
+
+let filteredRows = [];
 
 
-function fmt(value, digits = 0) {
+let charts = {};
 
-  return num(value).toLocaleString(
+let map = null;
+
+let mapLayer = null;
+
+let mapReady = false;
+
+
+let selectedMapState = null;
+
+
+let selectedMinistry =
+  "All Ministries";
+
+
+let selectedSector =
+  "All Sectors";
+
+
+let ministryOffset = 0;
+
+let sectorOffset = 0;
+
+
+let accessibilityStep = 0;
+
+
+
+/* =====================================================
+   HELPERS
+===================================================== */
+
+const $ = (selector) =>
+  document.querySelector(selector);
+
+
+const $$ = (selector) =>
+  document.querySelectorAll(selector);
+
+
+const num = (value) => {
+
+  const n =
+    Number(
+      String(value ?? "")
+        .replace(/,/g, "")
+    );
+
+  return Number.isFinite(n)
+    ? n
+    : 0;
+};
+
+
+const esc = (value) =>
+  String(value ?? "")
+    .replace(
+      /[&<>\"']/g,
+      (c) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[c])
+    );
+
+
+const fmt = (
+  value,
+  digits = 1
+) =>
+  new Intl.NumberFormat(
     "en-IN",
     {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: digits
+      maximumFractionDigits:
+        digits,
+
+      minimumFractionDigits: 0
     }
+  ).format(num(value));
+
+
+const money = (value) =>
+  `₹ ${fmt(value)} Cr`;
+
+
+function labelMonth(month) {
+
+  return (
+    MONTH_LABELS[month] ||
+    String(month || "")
+      .replace("_", " ") ||
+    "—"
   );
 
 }
 
 
-function pct(value) {
 
-  return `${fmt(value, 1)}%`;
+/* =====================================================
+   DATA FIELD NORMALIZATION
+===================================================== */
+
+function pick(
+  row,
+  keys,
+  fallback = ""
+) {
+
+  for (const key of keys) {
+
+    if (
+      row &&
+      row[key] !== undefined &&
+      row[key] !== null &&
+      String(row[key]).trim() !== ""
+    ) {
+
+      return row[key];
+
+    }
+
+  }
+
+  return fallback;
 
 }
 
 
-function escapeHTML(value) {
 
-  return String(value ?? "").replace(
-    /[&<>"']/g,
+/* =====================================================
+   STATE NORMALIZATION
+===================================================== */
 
-    character => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#039;"
-    }[character])
+function normalizeState(value) {
+
+  const raw =
+    String(value || "").trim();
+
+
+  const aliases = {
+
+    "jammu & kashmir":
+      "Jammu and Kashmir",
+
+    "jammu and kashmir":
+      "Jammu and Kashmir",
+
+    "nct of delhi":
+      "Delhi",
+
+    "orissa":
+      "Odisha",
+
+    "uttaranchal":
+      "Uttarakhand"
+
+  };
+
+
+  return (
+    aliases[raw.toLowerCase()] ||
+    raw
+  );
+
+}
+
+
+
+function getState(row) {
+
+  const direct =
+    pick(
+      row,
+      [
+        "state",
+        "state_name",
+        "state_ut",
+        "state/ut",
+        "State",
+        "State Name",
+        "STATE"
+      ]
+    );
+
+
+  if (direct) {
+
+    return normalizeState(direct);
+
+  }
+
+
+  /*
+   * Fallback only when the state is
+   * actually visible inside project text.
+   */
+
+  const text =
+    String(
+      pick(
+        row,
+        [
+          "project_name",
+          "Project Name"
+        ],
+        ""
+      )
+    );
+
+
+  const states = [
+
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chhattisgarh",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal",
+    "Delhi",
+    "Jammu and Kashmir",
+    "Ladakh",
+    "Chandigarh",
+    "Puducherry",
+    "Andaman and Nicobar Islands"
+
+  ];
+
+
+  const lower =
+    text.toLowerCase();
+
+
+  return normalizeState(
+
+    states.find(
+      (state) =>
+        lower.includes(
+          state.toLowerCase()
+        )
+    ) ||
+    "Other / Not detected"
 
   );
 
 }
 
 
-function percentValue(value) {
 
-  const n = num(value);
+/* =====================================================
+   NORMALIZE MONTHLY PROJECT DATA
+===================================================== */
 
-  if (n >= 0 && n <= 1) {
+function normalizeRow(row) {
 
-    return n * 100;
+  const original =
+    num(
+      pick(
+        row,
+        [
+          "original_cost",
+          "original_cost_cr",
+          "sanctioned_cost",
+          "Original Cost"
+        ],
+        0
+      )
+    );
 
-  }
 
-  return n;
+  const revised =
+    num(
+      pick(
+        row,
+        [
+          "revised_cost",
+          "latest_revised_cost",
+          "current_cost",
+          "revised_cost_cr",
+          "Revised Cost"
+        ],
+        original
+      )
+    );
+
+
+  const expenditure =
+    num(
+      pick(
+        row,
+        [
+          "expenditure",
+          "expenditure_cumulative",
+          "cumulative_expenditure",
+          "Expenditure"
+        ],
+        0
+      )
+    );
+
+
+  const physical =
+    num(
+      pick(
+        row,
+        [
+          "physical_progress",
+          "physical_progress_pct",
+          "physical_progress_percentage",
+          "Physical Progress"
+        ],
+        0
+      )
+    );
+
+
+  const suppliedFinancial =
+    pick(
+      row,
+      [
+        "financial_progress",
+        "financial_progress_pct",
+        "financial_progress_percentage",
+        "Financial Progress"
+      ],
+      null
+    );
+
+
+  const financial =
+    suppliedFinancial !== null
+      ? num(suppliedFinancial)
+      : (
+          original > 0
+            ? Math.min(
+                100,
+                (expenditure / original) * 100
+              )
+            : 0
+        );
+
+
+  const current =
+    revised > 0
+      ? revised
+      : original;
+
+
+  const costGrowth =
+    original > 0
+      ? (
+          (current - original) /
+          original
+        ) * 100
+      : 0;
+
+
+  const gap =
+    physical - financial;
+
+
+  /*
+   * Same rule structure as
+   * services/risk_engine.py
+   */
+
+  const costRisk =
+    costGrowth >= 20
+      ? 90
+      : costGrowth >= 10
+        ? 70
+        : costGrowth >= 5
+          ? 40
+          : 20;
+
+
+  const delayRisk =
+    gap <= -10
+      ? 90
+      : gap <= -5
+        ? 70
+        : gap <= 0
+          ? 50
+          : 30;
+
+
+  const risk =
+    Math.round(
+      costRisk * 0.4 +
+      delayRisk * 0.6
+    );
+
+
+  const level =
+    risk >= 75
+      ? "High"
+      : risk >= 40
+        ? "Medium"
+        : "Low";
+
+
+  return {
+
+    ...row,
+
+    project_id:
+      pick(
+        row,
+        [
+          "project_id",
+          "project_code",
+          "Project ID",
+          "Project Code"
+        ],
+        "—"
+      ),
+
+    project_code:
+      pick(
+        row,
+        [
+          "project_code",
+          "project_id",
+          "Project Code",
+          "Project ID"
+        ],
+        "—"
+      ),
+
+    project_name:
+      pick(
+        row,
+        [
+          "project_name",
+          "Project Name",
+          "name"
+        ],
+        "Unnamed project"
+      ),
+
+    line_ministry:
+      pick(
+        row,
+        [
+          "line_ministry",
+          "ministry",
+          "Ministry",
+          "Line Ministry"
+        ],
+        "Not specified"
+      ),
+
+    sector:
+      pick(
+        row,
+        [
+          "sector",
+          "Sector"
+        ],
+        "Other"
+      ),
+
+    state:
+      getState(row),
+
+    original_cost:
+      original,
+
+    current_cost:
+      current,
+
+    revised_cost:
+      revised,
+
+    expenditure:
+      expenditure,
+
+    physical_progress:
+      physical,
+
+    financial_progress:
+      financial,
+
+    cost_growth:
+      costGrowth,
+
+    cost_risk:
+      costRisk,
+
+    delay_risk:
+      delayRisk,
+
+    risk:
+      risk,
+
+    level:
+      level
+
+  };
 
 }
 
 
-// =====================================================
-// RISK
-// =====================================================
 
-function riskLevel(score) {
+/* =====================================================
+   API
+===================================================== */
 
-  score = Math.max(
-    0,
-    Math.min(100, num(score))
-  );
+async function fetchJSON(
+  url,
+  options = {}
+) {
 
-  if (score >= 70) {
+  const response =
+    await fetch(
+      url,
+      options
+    );
 
-    return "High";
-
-  }
-
-  if (score >= 40) {
-
-    return "Medium";
-
-  }
-
-  return "Low";
-
-}
-
-
-function riskBadge(level, score) {
-
-  return `
-
-    <span class="risk-badge ${String(level).toLowerCase()}">
-
-      <span>●</span>
-
-      ${fmt(score)}
-
-      ·
-
-      ${level}
-
-    </span>
-
-  `;
-
-}
-
-
-// =====================================================
-// API
-// =====================================================
-
-async function fetchJSON(url) {
-
-  const response = await fetch(url);
 
   if (!response.ok) {
 
     throw new Error(
-      `${response.status} ${response.statusText} — ${url}`
+      `${response.status} ${response.statusText}`
     );
 
   }
+
 
   return response.json();
 
 }
 
 
-async function fetchCurrentProjects() {
 
-  return fetchJSON(
-    `${API_BASE}/paimana-projects/`
-  );
+async function fetchMonth(month) {
 
-}
+  let page = 1;
 
+  const rows = [];
 
-async function fetchHistoricalProjects() {
 
-  return fetchJSON(
-    `${API_BASE}/historical-projects/`
-  );
+  while (true) {
 
-}
-
-
-// =====================================================
-// DATE HELPERS
-// =====================================================
-
-function parseDate(value) {
-
-  if (!value) {
-
-    return null;
-
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-
-    return null;
-
-  }
-
-  return date;
-
-}
-
-
-// =====================================================
-// CURRENT PROJECT RISK CALCULATION
-// =====================================================
-
-function buildRisk(raw) {
-
-  const originalCost =
-    num(raw.original_cost);
-
-
-  const revisedCost =
-    num(raw.revised_cost);
-
-
-  const currentCost =
-    revisedCost > 0
-      ? revisedCost
-      : originalCost;
-
-
-  const physical =
-    Math.max(
-      0,
-      Math.min(
-        100,
-        num(raw.physical_progress)
-      )
-    );
-
-
-  /*
-    expenditure_ratio is used as a
-    financial progress proxy.
-  */
-
-  const financial =
-    Math.max(
-      0,
-      Math.min(
-        100,
-        percentValue(raw.expenditure_ratio)
-      )
-    );
-
-
-  // -------------------------------------------------
-  // COST RISK
-  // -------------------------------------------------
-
-  let costOverrun =
-    num(raw.cost_overrun_percent);
-
-
-  /*
-    If cost_overrun_percent is missing,
-    calculate it from original/revised cost.
-  */
-
-  if (
-    !costOverrun &&
-    originalCost > 0 &&
-    revisedCost > 0
-  ) {
-
-    costOverrun =
-      (
-        (revisedCost - originalCost)
-        /
-        originalCost
-      ) * 100;
-
-  }
-
-
-  /*
-    Convert cost escalation into
-    a 0–100 risk score.
-  */
-
-  const costRisk =
-    Math.max(
-      0,
-      Math.min(
-        100,
-        costOverrun * 2
-      )
-    );
-
-
-  // -------------------------------------------------
-  // DELAY RISK
-  // -------------------------------------------------
-
-  const originalDate =
-    parseDate(
-      raw.original_completion_date
-    );
-
-
-  const revisedDate =
-    parseDate(
-      raw.revised_completion_date
-    );
-
-
-  const snapshotDate =
-    new Date("2026-07-31T00:00:00");
-
-
-  let delayRisk = 0;
-
-
-  /*
-    If revised completion date is later
-    than original completion date,
-    calculate schedule-extension risk.
-  */
-
-  if (
-    originalDate &&
-    revisedDate &&
-    revisedDate > originalDate
-  ) {
-
-    const extensionDays =
-      (
-        revisedDate.getTime()
-        -
-        originalDate.getTime()
-      ) / 86400000;
-
-
-    /*
-      Rough normalization:
-      365 days extension ≈ 100 risk.
-    */
-
-    delayRisk =
-      Math.min(
-        100,
-        Math.max(
-          0,
-          extensionDays / 3.65
-        )
-      );
-
-  }
-
-
-  /*
-    If project should already have completed
-    by July 2026 but physical progress is
-    still incomplete, add an overdue signal.
-  */
-
-  const targetDate =
-    revisedDate || originalDate;
-
-
-  if (
-    targetDate &&
-    targetDate < snapshotDate &&
-    physical < 100
-  ) {
-
-    delayRisk =
-      Math.min(
-        100,
-        delayRisk + 35
-      );
-
-  }
-
-
-  // -------------------------------------------------
-  // PROGRESS RISK
-  // -------------------------------------------------
-
-  const progressRisk =
-    100 - physical;
-
-
-  // -------------------------------------------------
-  // OVERALL RISK
-  // -------------------------------------------------
-
-  const overallRisk =
-    Math.round(
-      (
-        costRisk * 0.40 +
-        delayRisk * 0.40 +
-        progressRisk * 0.20
-      ) * 10
-    ) / 10;
-
-
-  // -------------------------------------------------
-  // REASONS
-  // -------------------------------------------------
-
-  const reasons = [];
-
-
-  if (costRisk >= 70) {
-
-    reasons.push(
-      "High cost escalation signal."
-    );
-
-  }
-  else if (costRisk >= 40) {
-
-    reasons.push(
-      "Moderate cost escalation signal."
-    );
-
-  }
-
-
-  if (delayRisk >= 70) {
-
-    reasons.push(
-      "High schedule-delay signal."
-    );
-
-  }
-  else if (delayRisk >= 40) {
-
-    reasons.push(
-      "Schedule slippage requires attention."
-    );
-
-  }
-
-
-  if (physical < 50) {
-
-    reasons.push(
-      "Physical progress is below 50%."
-    );
-
-  }
-
-
-  if (!reasons.length) {
-
-    reasons.push(
-      "No major risk indicator crossed the alert threshold."
-    );
-
-  }
-
-
-  return {
-
-    original: originalCost,
-
-    current: currentCost,
-
-    physical: physical,
-
-    financial: financial,
-
-    costRisk: costRisk,
-
-    delayRisk: delayRisk,
-
-    risk: overallRisk,
-
-    level: riskLevel(overallRisk),
-
-    reasons: reasons
-
-  };
-
-}
-
-
-// =====================================================
-// NORMALIZE CURRENT 1775 PROJECTS
-// =====================================================
-
-function normalizeCurrent(raw) {
-
-  const risk =
-    buildRisk(raw);
-
-
-  return {
-
-    raw: raw,
-
-    id:
-      raw.project_code ||
-      raw.sr_no ||
-      raw.project_id ||
-      "—",
-
-
-    name:
-      raw.project_name ||
-      "Unnamed project",
-
-
-    /*
-      Current CSV does not contain a state field.
-    */
-
-    state:
-      raw.state ||
-      "Not available",
-
-
-    sector:
-      raw.sector ||
-      "Other",
-
-
-    ministry:
-      raw.line_ministry ||
-      "Not available",
-
-
-    agency:
-      raw.implementing_agency ||
-      "Not available",
-
-
-    original:
-      risk.original,
-
-
-    current:
-      risk.current,
-
-
-    physical:
-      risk.physical,
-
-
-    financial:
-      risk.financial,
-
-
-    costRisk:
-      risk.costRisk,
-
-
-    delayRisk:
-      risk.delayRisk,
-
-
-    risk:
-      risk.risk,
-
-
-    level:
-      risk.level,
-
-
-    reasons:
-      risk.reasons
-
-  };
-
-}
-
-
-// =====================================================
-// LOAD BACKEND DATA
-// =====================================================
-
-async function loadBackendData() {
-
-  try {
-
-    /*
-      IMPORTANT:
-
-      Current portfolio:
-      /paimana-projects/
-
-      Historical:
-      /historical-projects/
-    */
-
-    const [
-      rawCurrent,
-      rawHistorical
-    ] = await Promise.all([
-
-      fetchCurrentProjects(),
-
-      fetchHistoricalProjects()
-
-    ]);
-
-
-    if (!Array.isArray(rawCurrent)) {
-
-      throw new Error(
-        "/paimana-projects/ did not return an array"
-      );
-
-    }
-
-
-    if (!Array.isArray(rawHistorical)) {
-
-      throw new Error(
-        "/historical-projects/ did not return an array"
-      );
-
-    }
-
-
-    /*
-      Current = 1775 July 2026 projects
-    */
-
-    projects =
-      rawCurrent.map(
-        normalizeCurrent
+    const data =
+      await fetchJSON(
+        `${API_BASE}/paimana-projects/?month=${encodeURIComponent(month)}&page=${page}&limit=100`
       );
 
 
-    /*
-      Historical = smaller historical dataset only
-    */
-
-    historicalProjects =
-      rawHistorical;
+    const pageRows =
+      Array.isArray(data.projects)
+        ? data.projects
+        : [];
 
 
-    historicalFiltered =
-      historicalProjects.slice();
-
-
-    const dateElement =
-      $("#dataDate");
-
-
-    if (dateElement) {
-
-      dateElement.textContent =
-        CURRENT_SNAPSHOT;
-
-    }
-
-
-    console.log(
-      `PAIMANA current projects loaded: ${projects.length}`
+    rows.push(
+      ...pageRows
     );
-
-
-    console.log(
-      `PAIMANA historical projects loaded: ${historicalProjects.length}`
-    );
-
-
-    populateFilters();
-
-    renderAll();
-
-  }
-  catch (error) {
-
-    console.error(
-      "PAIMANA frontend error:",
-      error
-    );
-
-
-    if ($("#dataDate")) {
-
-      $("#dataDate").textContent =
-        "Error";
-
-    }
-
-
-    toast(
-      "Data load failed — check browser console"
-    );
-
-  }
-
-}
-
-
-// =====================================================
-// FILTER DROPDOWNS
-// =====================================================
-
-function populateFilters() {
-
-  /*
-    Current 1775 sectors
-  */
-
-  const sectors =
-    [
-      ...new Set(
-        projects
-          .map(project => project.sector)
-          .filter(Boolean)
-      )
-    ].sort();
-
-
-  const projectSector =
-    $("#projectSector");
-
-
-  if (projectSector) {
-
-    projectSector.innerHTML =
-
-      `<option value="all">
-        All Sectors
-      </option>`
-
-      +
-
-      sectors
-        .map(
-          sector =>
-            `
-            <option value="${escapeHTML(sector)}">
-              ${escapeHTML(sector)}
-            </option>
-            `
-        )
-        .join("");
-
-  }
-
-
-  /*
-    Historical sectors
-  */
-
-  const historicalSector =
-    $("#historicalSector");
-
-
-  const historicalSectors =
-    [
-      ...new Set(
-        historicalProjects
-          .map(project => project.sector)
-          .filter(Boolean)
-      )
-    ].sort();
-
-
-  if (historicalSector) {
-
-    historicalSector.innerHTML =
-
-      `<option value="all">
-        All Sectors
-      </option>`
-
-      +
-
-      historicalSectors
-        .map(
-          sector =>
-            `
-            <option value="${escapeHTML(sector)}">
-              ${escapeHTML(sector)}
-            </option>
-            `
-        )
-        .join("");
-
-  }
-
-}
-
-
-// =====================================================
-// DASHBOARD KPIs
-// =====================================================
-
-function renderDashboardKPIs() {
-
-  const total =
-    projects.length;
-
-
-  const high =
-    projects.filter(
-      project =>
-        project.level === "High"
-    ).length;
-
-
-  const delay =
-    projects.filter(
-      project =>
-        project.delayRisk >= 70
-    ).length;
-
-
-  const currentCost =
-    projects.reduce(
-      (sum, project) =>
-        sum + project.current,
-      0
-    );
-
-
-  const averagePhysical =
-    total
-      ? projects.reduce(
-          (sum, project) =>
-            sum + project.physical,
-          0
-        ) / total
-      : 0;
-
-
-  if ($("#totalProjects")) {
-
-    $("#totalProjects").textContent =
-      fmt(total);
-
-  }
-
-
-  if ($("#highRisk")) {
-
-    $("#highRisk").textContent =
-      fmt(high);
-
-  }
-
-
-  if ($("#costExposure")) {
-
-    $("#costExposure").textContent =
-      `₹${fmt(currentCost)} Cr`;
-
-  }
-
-
-  if ($("#delayRisk")) {
-
-    $("#delayRisk").textContent =
-      fmt(delay);
-
-  }
-
-
-  if ($("#avgProgress")) {
-
-    $("#avgProgress").textContent =
-      pct(averagePhysical);
-
-  }
-
-
-  /*
-    AI Assistant context
-  */
-
-  if ($("#aiProjects")) {
-
-    $("#aiProjects").textContent =
-      fmt(total);
-
-  }
-
-
-  if ($("#aiHighRisk")) {
-
-    $("#aiHighRisk").textContent =
-      fmt(high);
-
-  }
-
-
-  if ($("#aiHistorical")) {
-
-    $("#aiHistorical").textContent =
-      fmt(historicalProjects.length);
-
-  }
-
-}
-
-
-// =====================================================
-// RISK DISTRIBUTION
-// =====================================================
-
-function renderRiskDistribution(
-  list = projects
-) {
-
-  const total =
-    list.length;
-
-
-  const high =
-    list.filter(
-      project =>
-        project.level === "High"
-    ).length;
-
-
-  const medium =
-    list.filter(
-      project =>
-        project.level === "Medium"
-    ).length;
-
-
-  const low =
-    Math.max(
-      0,
-      total - high - medium
-    );
-
-
-  const highPercent =
-    total
-      ? Math.round(
-          high / total * 100
-        )
-      : 0;
-
-
-  const mediumPercent =
-    total
-      ? Math.round(
-          medium / total * 100
-        )
-      : 0;
-
-
-  const lowPercent =
-    Math.max(
-      0,
-      100 -
-      highPercent -
-      mediumPercent
-    );
-
-
-  if ($("#riskTotal")) {
-
-    $("#riskTotal").textContent =
-      fmt(total);
-
-  }
-
-
-  if ($("#highRiskCount")) {
-
-    $("#highRiskCount").textContent =
-      fmt(high);
-
-  }
-
-
-  if ($("#mediumRiskCount")) {
-
-    $("#mediumRiskCount").textContent =
-      fmt(medium);
-
-  }
-
-
-  if ($("#lowRiskCount")) {
-
-    $("#lowRiskCount").textContent =
-      fmt(low);
-
-  }
-
-
-  if ($("#highRiskPercent")) {
-
-    $("#highRiskPercent").textContent =
-      `${highPercent}%`;
-
-  }
-
-
-  if ($("#mediumRiskPercent")) {
-
-    $("#mediumRiskPercent").textContent =
-      `${mediumPercent}%`;
-
-  }
-
-
-  if ($("#lowRiskPercent")) {
-
-    $("#lowRiskPercent").textContent =
-      `${lowPercent}%`;
-
-  }
-
-
-  const donut =
-    $("#riskDonut");
-
-
-  if (donut) {
-
-    donut.style.background =
-
-      `conic-gradient(
-        #d94b55 0 ${highPercent}%,
-        #d99522 ${highPercent}% ${highPercent + mediumPercent}%,
-        #2e9d6f ${highPercent + mediumPercent}% 100%
-      )`;
-
-  }
-
-}
-
-
-// =====================================================
-// SECTOR STATISTICS
-// =====================================================
-
-function sectorStats(
-  list = projects
-) {
-
-  const map = {};
-
-
-  list.forEach(project => {
-
-    const sector =
-      project.sector ||
-      "Other";
-
-
-    if (!map[sector]) {
-
-      map[sector] = {
-
-        sector: sector,
-
-        count: 0,
-
-        risk: 0,
-
-        delay: 0,
-
-        cost: 0,
-
-        high: 0
-
-      };
-
-    }
-
-
-    const item =
-      map[sector];
-
-
-    item.count++;
-
-    item.risk +=
-      project.risk;
-
-    item.delay +=
-      project.delayRisk;
-
-    item.cost +=
-      project.current;
 
 
     if (
-      project.level === "High"
+      !pageRows.length ||
+      page >= num(data.total_pages)
     ) {
 
-      item.high++;
+      break;
 
     }
 
-  });
+
+    page += 1;
+
+  }
 
 
-  return Object
-    .values(map)
-    .map(item => ({
-
-      ...item,
-
-      avgRisk:
-        item.risk /
-        item.count,
-
-      avgDelay:
-        item.delay /
-        item.count,
-
-      avgCost:
-        item.cost /
-        item.count
-
-    }));
+  return rows.map(
+    normalizeRow
+  );
 
 }
 
 
-// =====================================================
-// SECTOR BARS
-// =====================================================
 
-function renderSectorBars(
-  metric = "risk"
-) {
+/* =====================================================
+   RISK BADGE
+===================================================== */
 
-  const box =
-    $("#sectorBars");
+function riskBadge(project) {
 
-
-  if (!box) {
-
-    return;
-
-  }
-
-
-  const stats =
-    sectorStats()
-      .sort((a, b) => {
-
-        const aValue =
-          metric === "delay"
-            ? a.avgDelay
-            : metric === "cost"
-              ? a.avgCost
-              : a.avgRisk;
-
-
-        const bValue =
-          metric === "delay"
-            ? b.avgDelay
-            : metric === "cost"
-              ? b.avgCost
-              : b.avgRisk;
-
-
-        return bValue - aValue;
-
-      })
-      .slice(0, 8);
-
-
-  if (!stats.length) {
-
-    box.innerHTML =
-      "<p class='muted'>No sector data available.</p>";
-
-    return;
-
-  }
-
-
-  const max =
-    metric === "cost"
-      ? Math.max(
-          ...stats.map(
-            item =>
-              item.avgCost
-          ),
-          1
-        )
-      : 100;
-
-
-  box.innerHTML =
-
-    stats
-      .map(item => {
-
-        const value =
-
-          metric === "delay"
-            ? item.avgDelay
-
-            : metric === "cost"
-              ? item.avgCost
-
-              : item.avgRisk;
-
-
-        const width =
-          Math.min(
-            100,
-            value / max * 100
-          );
-
-
-        return `
-
-          <div class="bar-row">
-
-            <span>
-              ${escapeHTML(item.sector)}
-            </span>
-
-            <div class="bar-track">
-
-              <i
-                style="width:${width}%"
-              ></i>
-
-            </div>
-
-            <strong>
-
-              ${
-                metric === "cost"
-                  ? "₹" + fmt(value) + "Cr"
-                  : fmt(value)
-              }
-
-            </strong>
-
-          </div>
-
-        `;
-
-      })
-      .join("");
-
-}
-
-
-// =====================================================
-// RISK TABLE
-// =====================================================
-
-function renderRiskTable(
-  list =
-    projects
-      .slice()
-      .sort(
-        (a, b) =>
-          b.risk - a.risk
-      )
-      .slice(0, 7)
-) {
-
-  const table =
-    $("#riskTable");
-
-
-  if (!table) {
-
-    return;
-
-  }
-
-
-  if (!list.length) {
-
-    table.innerHTML = `
-
-      <tr>
-
-        <td colspan="7">
-          No projects found.
-        </td>
-
-      </tr>
-
-    `;
-
-    return;
-
-  }
-
-
-  table.innerHTML =
-
-    list
-      .map(project => `
-
-        <tr>
-
-          <td>
-
-            <div class="project-cell">
-
-              ${escapeHTML(project.name)}
-
-              <small>
-                Project ID
-                ${escapeHTML(project.id)}
-              </small>
-
-            </div>
-
-          </td>
-
-
-          <td>
-            ${escapeHTML(project.sector)}
-          </td>
-
-
-          <td>
-            ${escapeHTML(project.state)}
-          </td>
-
-
-          <td>
-            ${riskBadge(
-              project.level,
-              project.risk
-            )}
-          </td>
-
-
-          <td>
-            <span class="risk-number">
-              ${fmt(project.costRisk)}%
-            </span>
-          </td>
-
-
-          <td>
-            <span class="risk-number">
-              ${fmt(project.delayRisk)}%
-            </span>
-          </td>
-
-
-          <td>
-            <span class="risk-badge ${project.level.toLowerCase()}">
-              ${project.level}
-            </span>
-          </td>
-
-        </tr>
-
-      `)
-      .join("");
-
-}
-
-
-// =====================================================
-// PROJECT PORTFOLIO TABLE
-// =====================================================
-
-function renderProjectTable(
-  list = projects
-) {
-
-  const table =
-    $("#projectTable");
-
-
-  if (!table) {
-
-    return;
-
-  }
-
-
-  if (!list.length) {
-
-    table.innerHTML = `
-
-      <tr>
-
-        <td colspan="8">
-          No projects match the selected filters.
-        </td>
-
-      </tr>
-
-    `;
-
-    return;
-
-  }
-
-
-  table.innerHTML =
-
-    list
-      .map(project => `
-
-        <tr>
-
-          <td>
-
-            <div class="project-cell">
-
-              ${escapeHTML(project.name)}
-
-              <small>
-                ID ${escapeHTML(project.id)}
-              </small>
-
-            </div>
-
-          </td>
-
-
-          <td>
-            ${escapeHTML(project.state)}
-          </td>
-
-
-          <td>
-            ${escapeHTML(project.sector)}
-          </td>
-
-
-          <td>
-            ₹${fmt(project.original)} Cr
-          </td>
-
-
-          <td>
-            ₹${fmt(project.current)} Cr
-          </td>
-
-
-          <td>
-            ${pct(project.physical)}
-          </td>
-
-
-          <td>
-            ${pct(project.financial)}
-          </td>
-
-
-          <td>
-            ${riskBadge(
-              project.level,
-              project.risk
-            )}
-          </td>
-
-        </tr>
-
-      `)
-      .join("");
-
-}
-
-
-// =====================================================
-// DASHBOARD WARNINGS
-// =====================================================
-
-function renderDashboardWarnings() {
-
-  const box =
-    $("#dashboardWarnings");
-
-
-  if (!box) {
-
-    return;
-
-  }
-
-
-  const warnings =
-
-    projects
-
-      .filter(
-        project =>
-
-          project.level === "High" ||
-
-          project.costRisk >= 70 ||
-
-          project.delayRisk >= 70 ||
-
-          project.physical < 50
-      )
-
-      .sort(
-        (a, b) =>
-          b.risk - a.risk
-      )
-
-      .slice(0, 4);
-
-
-  if (!warnings.length) {
-
-    box.innerHTML = `
-
-      <div class="alert-item">
-
-        <strong>
-          No critical warnings
-        </strong>
-
-        <small>
-          Current project data has no high-priority alerts.
-        </small>
-
-      </div>
-
-    `;
-
-    return;
-
-  }
-
-
-  box.innerHTML =
-
-    warnings
-      .map(project => `
-
-        <div class="alert-item">
-
-          <strong>
-            ${escapeHTML(project.name)}
-          </strong>
-
-          <small>
-            Risk ${fmt(project.risk)}
-            · Cost ${fmt(project.costRisk)}
-            · Delay ${fmt(project.delayRisk)}
-          </small>
-
-        </div>
-
-      `)
-      .join("");
-
-}
-
-
-// =====================================================
-// PORTFOLIO INSIGHT
-// =====================================================
-
-function renderPortfolioInsight() {
-
-  const element =
-    $("#portfolioInsight");
-
-
-  if (!element) {
-
-    return;
-
-  }
-
-
-  if (!projects.length) {
-
-    element.textContent =
-      "No project data available.";
-
-    return;
-
-  }
-
-
-  const highestRisk =
-
-    projects
-      .slice()
-      .sort(
-        (a, b) =>
-          b.risk - a.risk
-      )[0];
-
-
-  const highRiskCount =
-
-    projects.filter(
-      project =>
-        project.level === "High"
-    ).length;
-
-
-  const averageRisk =
-
-    projects.reduce(
-      (sum, project) =>
-        sum + project.risk,
-      0
-    ) / projects.length;
-
-
-  const sector =
-
-    sectorStats()
-      .sort(
-        (a, b) =>
-          b.avgRisk -
-          a.avgRisk
-      )[0];
-
-
-  element.innerHTML = `
-
-    The July 2026 portfolio contains
-
-    <b>
-      ${fmt(projects.length)}
-    </b>
-
-    monitored projects with an average derived risk score of
-
-    <b>
-      ${fmt(averageRisk)}/100
-    </b>.
-
-    The highest current signal is
-
-    <b>
-      ${escapeHTML(highestRisk.name)}
-    </b>
-
-    at
-
-    <b>
-      ${fmt(highestRisk.risk)}/100
-    </b>.
-
-    There are
-
-    <b>
-      ${fmt(highRiskCount)}
-    </b>
-
-    high-risk projects requiring attention.
-
-    ${
-      sector
-        ? `
-          <br><br>
-          <b>${escapeHTML(sector.sector)}</b>
-          has the highest average risk among the current sectors.
-        `
-        : ""
-    }
-
+  return `
+    <span class="risk-badge risk-${project.level.toLowerCase()}">
+      <i></i>
+      ${project.risk}/100 · ${project.level}
+    </span>
   `;
 
 }
 
 
-// =====================================================
-// PROJECT PROGRESS
-// =====================================================
 
-function renderProgress() {
+/* =====================================================
+   FILTER
+===================================================== */
 
-  if (!projects.length) {
+function getFilteredRows() {
+
+  let rows =
+    [...allRows];
+
+
+  const sector =
+    $("#globalSector")?.value ||
+    "all";
+
+
+  const risk =
+    $("#globalRisk")?.value ||
+    "all";
+
+
+  if (sector !== "all") {
+
+    rows =
+      rows.filter(
+        (p) =>
+          p.sector === sector
+      );
+
+  }
+
+
+  if (risk !== "all") {
+
+    rows =
+      rows.filter(
+        (p) =>
+          p.level.toLowerCase() ===
+          risk
+      );
+
+  }
+
+
+  return rows;
+
+}
+
+
+
+/* =====================================================
+   AGGREGATION
+===================================================== */
+
+function aggregate(
+  rows,
+  key
+) {
+
+  const groups = {};
+
+
+  rows.forEach(
+    (project) => {
+
+      const groupKey =
+        project[key] ||
+        "Other";
+
+
+      if (!groups[groupKey]) {
+
+        groups[groupKey] = {
+
+          key:
+            groupKey,
+
+          count:
+            0,
+
+          original:
+            0,
+
+          revised:
+            0,
+
+          expenditure:
+            0,
+
+          physical:
+            0,
+
+          risk:
+            0,
+
+          high:
+            0,
+
+          medium:
+            0,
+
+          low:
+            0
+
+        };
+
+      }
+
+
+      const group =
+        groups[groupKey];
+
+
+      group.count += 1;
+
+      group.original +=
+        project.original_cost;
+
+      group.revised +=
+        project.current_cost;
+
+      group.expenditure +=
+        project.expenditure;
+
+      group.physical +=
+        project.physical_progress;
+
+      group.risk +=
+        project.risk;
+
+
+      group[
+        project.level.toLowerCase()
+      ] += 1;
+
+    }
+  );
+
+
+  return Object.values(groups)
+
+    .map(
+      (group) => ({
+
+        ...group,
+
+        avgPhysical:
+          group.count
+            ? group.physical /
+              group.count
+            : 0,
+
+        avgRisk:
+          group.count
+            ? group.risk /
+              group.count
+            : 0
+
+      })
+    )
+
+    .sort(
+      (a, b) =>
+        b.count - a.count
+    );
+
+}
+
+
+
+/* =====================================================
+   OVERALL STATS
+===================================================== */
+
+function overallStats(rows) {
+
+  const count =
+    rows.length;
+
+
+  return {
+
+    count,
+
+    original:
+      rows.reduce(
+        (sum, p) =>
+          sum + p.original_cost,
+        0
+      ),
+
+    revised:
+      rows.reduce(
+        (sum, p) =>
+          sum + p.current_cost,
+        0
+      ),
+
+    expenditure:
+      rows.reduce(
+        (sum, p) =>
+          sum + p.expenditure,
+        0
+      ),
+
+    avgPhysical:
+      count
+        ? rows.reduce(
+            (sum, p) =>
+              sum +
+              p.physical_progress,
+            0
+          ) / count
+        : 0,
+
+    avgRisk:
+      count
+        ? rows.reduce(
+            (sum, p) =>
+              sum + p.risk,
+            0
+          ) / count
+        : 0
+
+  };
+
+}
+
+
+
+/* =====================================================
+   CHART HELPERS
+===================================================== */
+
+function destroyChart(id) {
+
+  if (charts[id]) {
+
+    charts[id].destroy();
+
+    delete charts[id];
+
+  }
+
+}
+
+
+
+function makeChart(
+  id,
+  type,
+  data,
+  options = {}
+) {
+
+  destroyChart(id);
+
+
+  const canvas =
+    $(id);
+
+
+  if (
+    !canvas ||
+    typeof Chart ===
+      "undefined"
+  ) {
 
     return;
 
   }
 
 
-  const averagePhysical =
+  charts[id] =
+    new Chart(
+      canvas,
+      {
 
-    projects.reduce(
-      (sum, project) =>
-        sum + project.physical,
-      0
-    ) / projects.length;
+        type,
 
+        data,
 
-  const averageFinancial =
+        options: {
 
-    projects.reduce(
-      (sum, project) =>
-        sum + project.financial,
-      0
-    ) / projects.length;
+          responsive: true,
 
+          maintainAspectRatio:
+            false,
 
-  const below50 =
+          interaction: {
 
-    projects.filter(
-      project =>
-        project.physical < 50
-    ).length;
+            mode: "index",
 
+            intersect: false
 
-  const largestGap =
+          },
 
-    Math.max(
-      ...projects.map(
-        project =>
-          Math.abs(
-            project.physical -
-            project.financial
-          )
-      ),
-      0
+          plugins: {
+
+            legend: {
+
+              position: "bottom",
+
+              labels: {
+
+                boxWidth: 10,
+
+                font: {
+                  size: 10
+                }
+
+              }
+
+            },
+
+            tooltip: {
+
+              callbacks: {
+
+                label: (ctx) =>
+
+                  `${
+                    ctx.dataset.label
+                      ? ctx.dataset.label +
+                        ": "
+                      : ""
+                  }${fmt(ctx.raw)}`
+
+              }
+
+            }
+
+          },
+
+          ...options
+
+        }
+
+      }
     );
 
-
-  $("#progressPhysical").textContent =
-    pct(averagePhysical);
+}
 
 
-  $("#progressFinancial").textContent =
-    pct(averageFinancial);
+
+/* =====================================================
+   DASHBOARD CHARTS
+===================================================== */
+
+function renderDashboardCharts(rows) {
+
+  const sectors =
+    aggregate(
+      rows,
+      "sector"
+    ).slice(0, 10);
 
 
-  $("#progressBelow").textContent =
-    fmt(below50);
+  makeChart(
+    "#sectorChart",
+    "doughnut",
+    {
+
+      labels:
+        sectors.map(
+          (x) => x.key
+        ),
+
+      datasets: [
+
+        {
+
+          label:
+            "Projects",
+
+          data:
+            sectors.map(
+              (x) => x.count
+            ),
+
+          backgroundColor: [
+
+            "#17395b",
+            "#4e8a62",
+            "#e7a51a",
+            "#d86f50",
+            "#5871b5",
+            "#8b62a9",
+            "#d36b9b",
+            "#6ea7c4",
+            "#83966e",
+            "#8b95a0"
+
+          ],
+
+          borderWidth:
+            2,
+
+          borderColor:
+            "#fff"
+
+        }
+
+      ]
+
+    },
+
+    {
+
+      plugins: {
+
+        legend: {
+
+          position:
+            "right"
+
+        }
+
+      }
+
+    }
+
+  );
 
 
-  $("#progressGap").textContent =
-    pct(largestGap);
+
+  const stats =
+    overallStats(rows);
+
+
+  makeChart(
+    "#costChart",
+    "bar",
+    {
+
+      labels: [
+
+        "Original Cost",
+
+        "Revised / Current",
+
+        "Expenditure"
+
+      ],
+
+      datasets: [
+
+        {
+
+          label:
+            "₹ Cr",
+
+          data: [
+
+            stats.original,
+
+            stats.revised,
+
+            stats.expenditure
+
+          ],
+
+          backgroundColor: [
+
+            "#182d57",
+            "#284795",
+            "#7082bb"
+
+          ],
+
+          borderRadius:
+            4,
+
+          maxBarThickness:
+            72
+
+        }
+
+      ]
+
+    },
+
+    {
+
+      plugins: {
+
+        legend: {
+          display: false
+        }
+
+      },
+
+      scales: {
+
+        y: {
+
+          beginAtZero:
+            true,
+
+          ticks: {
+
+            callback:
+              (v) =>
+                `₹${fmt(v)}`
+
+          }
+
+        }
+
+      }
+
+    }
+
+  );
+
 
 
   const bands = [
 
-    [
-      "0–25%",
-      projects.filter(
-        project =>
-          project.physical <= 25
-      ).length
-    ],
+    "< 20",
 
-    [
-      "26–50%",
-      projects.filter(
-        project =>
-          project.physical > 25 &&
-          project.physical <= 50
-      ).length
-    ],
+    "20–40",
 
-    [
-      "51–75%",
-      projects.filter(
-        project =>
-          project.physical > 50 &&
-          project.physical <= 75
-      ).length
-    ],
+    "40–60",
 
-    [
-      "76–100%",
-      projects.filter(
-        project =>
-          project.physical > 75
-      ).length
-    ]
+    "60–80",
+
+    "≥ 80"
 
   ];
 
 
-  const maxBand =
-    Math.max(
-      ...bands.map(
-        band => band[1]
-      ),
-      1
-    );
-
-
-  $("#progressBars").innerHTML =
-
-    bands
-      .map(
-        band => `
-
-          <div class="bar-row">
-
-            <span>
-              ${band[0]}
-            </span>
-
-            <div class="bar-track">
-
-              <i
-                style="width:${band[1] / maxBand * 100}%"
-              ></i>
-
-            </div>
-
-            <strong>
-              ${fmt(band[1])}
-            </strong>
-
-          </div>
-
-        `
-      )
-      .join("");
-
-
-  const gaps =
-
-    projects
-      .slice()
-      .sort(
-        (a, b) =>
-
-          Math.abs(
-            b.physical -
-            b.financial
-          )
-
-          -
-
-          Math.abs(
-            a.physical -
-            a.financial
-          )
-      )
-      .slice(0, 7);
-
-
-  $("#progressGapList").innerHTML =
-
-    gaps
-      .map(project => `
-
-        <div class="mini-item">
-
-          <strong>
-            ${escapeHTML(project.name)}
-          </strong>
-
-          <small>
-
-            Physical
-            ${fmt(project.physical)}%
-
-            ·
-
-            Financial
-            ${fmt(project.financial)}%
-
-            ·
-
-            Gap
-            ${fmt(
-              Math.abs(
-                project.physical -
-                project.financial
-              )
-            )}%
-
-          </small>
-
-        </div>
-
-      `)
-      .join("");
-
-}
-
-
-// =====================================================
-// COST PAGE
-// =====================================================
-
-function renderCost() {
-
-  if (!projects.length) {
-
-    return;
-
-  }
-
-
-  const originalTotal =
-
-    projects.reduce(
-      (sum, project) =>
-        sum + project.original,
-      0
-    );
-
-
-  const currentTotal =
-
-    projects.reduce(
-      (sum, project) =>
-        sum + project.current,
-      0
-    );
-
-
-  const increase =
-    currentTotal -
-    originalTotal;
-
-
-  const averageMovement =
-
-    projects.reduce(
-      (sum, project) => {
-
-        if (!project.original) {
-
-          return sum;
-
-        }
-
-
-        return sum +
-
-          (
-            (
-              project.current -
-              project.original
-            )
-
-            /
-
-            project.original
-          ) * 100;
-
-      },
-      0
-    ) / projects.length;
-
-
-  $("#originalCostTotal").textContent =
-    `₹${fmt(originalTotal)} Cr`;
-
-
-  $("#currentCostTotal").textContent =
-    `₹${fmt(currentTotal)} Cr`;
-
-
-  $("#costIncrease").textContent =
-    `₹${fmt(increase)} Cr`;
-
-
-  $("#avgCostMovement").textContent =
-    pct(averageMovement);
-
-
-  const list =
-
-    projects
-      .slice()
-      .sort((a, b) => {
-
-        const aChange =
-          a.original
-            ? (
-                (a.current - a.original)
-                /
-                a.original
-              ) * 100
-            : 0;
-
-
-        const bChange =
-          b.original
-            ? (
-                (b.current - b.original)
-                /
-                b.original
-              ) * 100
-            : 0;
-
-
-        return bChange - aChange;
-
-      })
-      .slice(0, 10);
-
-
-  $("#costTable").innerHTML =
-
-    list
-      .map(project => {
-
-        const change =
-
-          project.original
-
-            ? (
-                (
-                  project.current -
-                  project.original
-                )
-
-                /
-
-                project.original
-
-              ) * 100
-
-            : 0;
-
-
-        return `
-
-          <tr>
-
-            <td>
-
-              <div class="project-cell">
-
-                ${escapeHTML(project.name)}
-
-                <small>
-                  ID ${escapeHTML(project.id)}
-                </small>
-
-              </div>
-
-            </td>
-
-
-            <td>
-              ${escapeHTML(project.sector)}
-            </td>
-
-
-            <td>
-              ₹${fmt(project.original)} Cr
-            </td>
-
-
-            <td>
-              ₹${fmt(project.current)} Cr
-            </td>
-
-
-            <td>
-              ${pct(change)}
-            </td>
-
-
-            <td>
-              ${pct(project.financial)}
-            </td>
-
-          </tr>
-
-        `;
-
-      })
-      .join("");
-
-}
-
-
-// =====================================================
-// SCHEDULE PAGE
-// =====================================================
-
-function renderSchedule() {
-
-  const highDelay =
-
-    projects.filter(
-      project =>
-        project.delayRisk >= 70
-    ).length;
-
-
-  const averageDelay =
-
-    projects.length
-
-      ? projects.reduce(
-          (sum, project) =>
-            sum + project.delayRisk,
-          0
-        ) / projects.length
-
-      : 0;
-
-
-  const highOverall =
-
-    projects.filter(
-      project =>
-        project.level === "High"
-    ).length;
-
-
-  const lowProgress =
-
-    projects.filter(
-      project =>
-        project.physical < 50
-    ).length;
-
-
-  $("#scheduleHigh").textContent =
-    fmt(highDelay);
-
-
-  $("#scheduleAvg").textContent =
-    pct(averageDelay);
-
-
-  $("#scheduleOverallHigh").textContent =
-    fmt(highOverall);
-
-
-  $("#scheduleLowProgress").textContent =
-    fmt(lowProgress);
-
-
-  const list =
-
-    projects
-      .slice()
-      .sort(
-        (a, b) =>
-          b.delayRisk -
-          a.delayRisk
-      )
-      .slice(0, 12);
-
-
-  $("#scheduleTable").innerHTML =
-
-    list
-      .map(project => `
-
-        <tr>
-
-          <td>
-
-            <div class="project-cell">
-
-              ${escapeHTML(project.name)}
-
-              <small>
-                ID ${escapeHTML(project.id)}
-              </small>
-
-            </div>
-
-          </td>
-
-
-          <td>
-            ${escapeHTML(project.sector)}
-          </td>
-
-
-          <td>
-            ${escapeHTML(project.state)}
-          </td>
-
-
-          <td>
-            ${riskBadge(
-              riskLevel(project.delayRisk),
-              project.delayRisk
-            )}
-          </td>
-
-
-          <td>
-            ${pct(project.physical)}
-          </td>
-
-
-          <td>
-            ${riskBadge(
-              project.level,
-              project.risk
-            )}
-          </td>
-
-        </tr>
-
-      `)
-      .join("");
-
-}
-
-
-// =====================================================
-// RISK ANALYTICS
-// =====================================================
-
-function renderRiskAnalytics() {
-
-  if (!projects.length) {
-
-    return;
-
-  }
-
-
-  const averageRisk =
-
-    projects.reduce(
-      (sum, project) =>
-        sum + project.risk,
-      0
-    ) / projects.length;
-
-
-  const averageCostRisk =
-
-    projects.reduce(
-      (sum, project) =>
-        sum + project.costRisk,
-      0
-    ) / projects.length;
-
-
-  const averageDelayRisk =
-
-    projects.reduce(
-      (sum, project) =>
-        sum + project.delayRisk,
-      0
-    ) / projects.length;
-
-
-  $("#avgPortfolioRisk").textContent =
-    fmt(averageRisk);
-
-
-  $("#avgCostRisk").textContent =
-    fmt(averageCostRisk);
-
-
-  $("#avgDelayRisk").textContent =
-    fmt(averageDelayRisk);
-
-
-  $("#riskHighCount").textContent =
-
-    fmt(
-      projects.filter(
-        project =>
-          project.level === "High"
-      ).length
-    );
-
-
-  const stats =
-
-    sectorStats()
-      .sort(
-        (a, b) =>
-          b.avgRisk -
-          a.avgRisk
-      );
-
-
-  const box =
-    $("#riskSectorBars");
-
-
-  const maxRisk =
-
-    Math.max(
-      ...stats.map(
-        item =>
-          item.avgRisk
-      ),
-      1
-    );
-
-
-  box.innerHTML =
-
-    stats
-      .slice(0, 8)
-      .map(item => `
-
-        <div class="bar-row">
-
-          <span>
-            ${escapeHTML(item.sector)}
-          </span>
-
-          <div class="bar-track">
-
-            <i
-              style="width:${item.avgRisk / maxRisk * 100}%"
-            ></i>
-
-          </div>
-
-          <strong>
-            ${fmt(item.avgRisk)}
-          </strong>
-
-        </div>
-
-      `)
-      .join("");
-
-
-  const maxCostRisk =
-
-    Math.max(
-      ...projects.map(
-        project =>
-          project.costRisk
-      ),
-      0
-    );
-
-
-  const maxDelayRisk =
-
-    Math.max(
-      ...projects.map(
-        project =>
-          project.delayRisk
-      ),
-      0
-    );
-
-
-  const maxProgressGap =
-
-    Math.max(
-      ...projects.map(
-        project =>
-          Math.abs(
-            project.physical -
-            project.financial
-          )
-      ),
-      0
-    );
-
-
-  $("#factorList").innerHTML = `
-
-    <div class="factor-item">
-
-      <strong>
-        Peak cost-risk signal ·
-        ${fmt(maxCostRisk)}%
-      </strong>
-
-      <small>
-        Highest project-level cost-risk signal currently loaded.
-      </small>
-
-    </div>
-
-
-    <div class="factor-item">
-
-      <strong>
-        Peak delay-risk signal ·
-        ${fmt(maxDelayRisk)}%
-      </strong>
-
-      <small>
-        Highest project-level delay-risk signal currently loaded.
-      </small>
-
-    </div>
-
-
-    <div class="factor-item">
-
-      <strong>
-        Largest progress gap ·
-        ${fmt(maxProgressGap)}%
-      </strong>
-
-      <small>
-        Largest absolute difference between physical and financial progress.
-      </small>
-
-    </div>
-
-  `;
-
-
-  $("#riskSummary").innerHTML =
-
-    projects
-
-      .slice()
-      .sort(
-        (a, b) =>
-          b.risk -
-          a.risk
-      )
-
-      .slice(0, 10)
-
-      .map(project => `
-
-        <tr>
-
-          <td>
-
-            <div class="project-cell">
-
-              ${escapeHTML(project.name)}
-
-              <small>
-                ID ${escapeHTML(project.id)}
-              </small>
-
-            </div>
-
-          </td>
-
-
-          <td>
-            ${escapeHTML(project.sector)}
-          </td>
-
-
-          <td>
-            ${escapeHTML(project.state)}
-          </td>
-
-
-          <td>
-            ${riskBadge(
-              project.level,
-              project.risk
-            )}
-          </td>
-
-
-          <td>
-            ${fmt(project.costRisk)}%
-          </td>
-
-
-          <td>
-            ${fmt(project.delayRisk)}%
-          </td>
-
-        </tr>
-
-      `)
-      .join("");
-
-}
-
-
-// =====================================================
-// HISTORICAL COST OVERRUN
-// =====================================================
-
-function historicalOverrun(row) {
-
-  if (
-    row.cost_overrun_percent !== null &&
-    row.cost_overrun_percent !== undefined &&
-    row.cost_overrun_percent !== ""
-  ) {
-
-    return num(
-      row.cost_overrun_percent
-    );
-
-  }
-
-
-  const original =
-    num(row.original_cost);
-
-
-  const revised =
-    num(row.revised_cost);
-
-
-  if (
-    original &&
-    revised
-  ) {
-
-    return (
-      (revised - original)
-      /
-      original
-    ) * 100;
-
-  }
-
-
-  return 0;
-
-}
-
-
-// =====================================================
-// HISTORICAL PAGE
-// =====================================================
-
-function renderHistorical() {
-
-  historicalFiltered =
-    historicalProjects.slice();
-
-
-  historicalPage = 1;
-
-
-  const overruns =
-
-    historicalProjects
-      .map(
-        historicalOverrun
-      )
-      .filter(
-        value =>
-          Number.isFinite(value)
-      );
-
-
-  const averageOverrun =
-
-    overruns.length
-
-      ? overruns.reduce(
-          (sum, value) =>
-            sum + value,
-          0
-        ) / overruns.length
-
-      : 0;
-
-
-  const positiveOverruns =
-
-    overruns.filter(
-      value =>
-        value > 0
-    ).length;
-
-
-  const sectorCounts = {};
-
-
-  historicalProjects.forEach(
-    project => {
-
-      const sector =
-        project.sector ||
-        "Other";
-
-
-      sectorCounts[sector] =
-        (
-          sectorCounts[sector] ||
-          0
-        ) + 1;
+  const bandCounts = [
+    0,
+    0,
+    0,
+    0,
+    0
+  ];
+
+
+  rows.forEach(
+    (project) => {
+
+      const value =
+        project.physical_progress;
+
+
+      const index =
+        value < 20
+          ? 0
+          : value < 40
+            ? 1
+            : value < 60
+              ? 2
+              : value < 80
+                ? 3
+                : 4;
+
+
+      bandCounts[index] += 1;
 
     }
   );
 
 
-  const topSector =
+  makeChart(
+    "#progressChart",
+    "bar",
+    {
 
-    Object.entries(
-      sectorCounts
+      labels:
+        bands,
+
+      datasets: [
+
+        {
+
+          label:
+            "Projects",
+
+          data:
+            bandCounts,
+
+          backgroundColor: [
+
+            "#9fe59f",
+            "#8dcc8d",
+            "#79ae7a",
+            "#5e8662",
+            "#48634e"
+
+          ],
+
+          borderRadius:
+            3,
+
+          maxBarThickness:
+            55
+
+        }
+
+      ]
+
+    },
+
+    {
+
+      plugins: {
+
+        legend: {
+          display: false
+        }
+
+      },
+
+      scales: {
+
+        y: {
+
+          beginAtZero:
+            true,
+
+          ticks: {
+            precision: 0
+          }
+
+        }
+
+      }
+
+    }
+
+  );
+
+
+
+  const states =
+    aggregate(
+      rows,
+      "state"
     )
-      .sort(
-        (a, b) =>
-          b[1] - a[1]
-      )[0];
+
+      .filter(
+        (x) =>
+          x.key !==
+          "Other / Not detected"
+      )
+
+      .slice(0, 18);
 
 
-  $("#historicalCount").textContent =
-    fmt(
-      historicalProjects.length
-    );
+  makeChart(
+    "#stateChart",
+    "doughnut",
+    {
 
+      labels:
+        states.map(
+          (x) => x.key
+        ),
 
-  $("#histRecords").textContent =
-    fmt(
-      historicalProjects.length
-    );
+      datasets: [
 
+        {
 
-  $("#histAvgOverrun").textContent =
-    pct(averageOverrun);
+          label:
+            "Projects",
 
+          data:
+            states.map(
+              (x) => x.count
+            ),
 
-  $("#histOverrunCount").textContent =
-    fmt(positiveOverruns);
+          backgroundColor: [
 
+            "#2f4c78",
+            "#5aa05b",
+            "#efb44c",
+            "#df795c",
+            "#6c6fd0",
+            "#6f59b2",
+            "#d85f9a",
+            "#72a8c8",
+            "#7ca06c",
+            "#8995a4",
+            "#b16d6d",
+            "#5f91b7",
+            "#8b76c2",
+            "#d68b55",
+            "#638d74",
+            "#a67a9b",
+            "#6e8b9e",
+            "#9a9a62"
 
-  $("#histTopSector").textContent =
+          ],
 
-    topSector
-      ? escapeHTML(topSector[0])
-      : "—";
+          borderWidth:
+            2,
 
+          borderColor:
+            "#fff"
 
-  renderHistoricalTable();
+        }
+
+      ]
+
+    },
+
+    {
+
+      plugins: {
+
+        legend: {
+
+          position:
+            "right",
+
+          labels: {
+
+            font: {
+              size: 9
+            }
+
+          }
+
+        }
+
+      }
+
+    }
+
+  );
 
 }
 
 
-// =====================================================
-// HISTORICAL TABLE
-// =====================================================
 
-function renderHistoricalTable() {
+/* =====================================================
+   CHART DATA TABLES
+===================================================== */
 
-  const table =
-    $("#historicalTable");
+function renderDashboardDataTables(rows) {
 
-
-  if (!table) {
-
-    return;
-
-  }
-
-
-  const start =
-    (
-      historicalPage - 1
-    ) * HIST_PAGE_SIZE;
-
-
-  const rows =
-
-    historicalFiltered.slice(
-      start,
-      start + HIST_PAGE_SIZE
+  const sectorData =
+    aggregate(
+      rows,
+      "sector"
     );
 
 
-  const totalPages =
-
-    Math.max(
-      1,
-      Math.ceil(
-        historicalFiltered.length /
-        HIST_PAGE_SIZE
-      )
+  const stateData =
+    aggregate(
+      rows,
+      "state"
     );
 
 
-  if (!rows.length) {
+  const stats =
+    overallStats(rows);
 
-    table.innerHTML = `
 
-      <tr>
+  $("#sectorDataBody")
+    .innerHTML =
 
-        <td colspan="10">
-          No historical records found.
-        </td>
+    sectorData
 
-      </tr>
-
-    `;
-
-  }
-  else {
-
-    table.innerHTML =
-
-      rows
-        .map(row => `
+      .map(
+        (x) => `
 
           <tr>
 
             <td>
-
-              <div class="project-cell">
-
-                ${escapeHTML(
-                  row.project_name
-                )}
-
-                <small>
-                  Sr. No.
-                  ${escapeHTML(
-                    row.sr_no
-                  )}
-                </small>
-
-              </div>
-
+              ${esc(x.key)}
             </td>
 
-
             <td>
-              ${escapeHTML(
-                row.project_code
-              )}
+              ${x.count}
             </td>
 
-
             <td>
-              ${escapeHTML(
-                row.sector
-              )}
+              ${money(x.revised)}
             </td>
 
-
             <td>
-              ${escapeHTML(
-                row.line_ministry
-              )}
+              ${fmt(x.avgPhysical)}%
             </td>
 
-
             <td>
-              ${escapeHTML(
-                row.implementing_agency
-              )}
-            </td>
-
-
-            <td>
-              ₹${fmt(
-                row.original_cost
-              )} Cr
-            </td>
-
-
-            <td>
-              ₹${fmt(
-                row.revised_cost
-              )} Cr
-            </td>
-
-
-            <td>
-              ₹${fmt(
-                row.expenditure
-              )} Cr
-            </td>
-
-
-            <td>
-              ${pct(
-                row.physical_progress
-              )}
-            </td>
-
-
-            <td>
-              ${pct(
-                historicalOverrun(row)
-              )}
+              ${fmt(x.avgRisk)}
             </td>
 
           </tr>
 
-        `)
-        .join("");
+        `
+      )
 
-  }
+      .join("")
 
-
-  $("#histPageInfo").textContent =
-
-    `Page ${historicalPage} of ${totalPages}`;
+      ||
+      emptyRow(5);
 
 
-  $("#histPrev").disabled =
-    historicalPage <= 1;
+
+  $("#costDataBody")
+    .innerHTML =
+
+    [
+
+      [
+        "Original Cost",
+        stats.original
+      ],
+
+      [
+        "Revised / Current",
+        stats.revised
+      ],
+
+      [
+        "Expenditure",
+        stats.expenditure
+      ]
+
+    ]
+
+      .map(
+        ([label, value]) => `
+
+          <tr>
+
+            <td>
+              ${label}
+            </td>
+
+            <td>
+              ${money(value)}
+            </td>
+
+          </tr>
+
+        `
+      )
+
+      .join("");
 
 
-  $("#histNext").disabled =
-    historicalPage >= totalPages;
+
+  $("#progressDataBody")
+    .innerHTML =
+
+    [
+
+      [
+        "< 20",
+        rows.filter(
+          (p) =>
+            p.physical_progress < 20
+        ).length
+      ],
+
+      [
+        "20–40",
+        rows.filter(
+          (p) =>
+            p.physical_progress >= 20 &&
+            p.physical_progress < 40
+        ).length
+      ],
+
+      [
+        "40–60",
+        rows.filter(
+          (p) =>
+            p.physical_progress >= 40 &&
+            p.physical_progress < 60
+        ).length
+      ],
+
+      [
+        "60–80",
+        rows.filter(
+          (p) =>
+            p.physical_progress >= 60 &&
+            p.physical_progress < 80
+        ).length
+      ],
+
+      [
+        "≥ 80",
+        rows.filter(
+          (p) =>
+            p.physical_progress >= 80
+        ).length
+      ]
+
+    ]
+
+      .map(
+        ([band, count]) => `
+
+          <tr>
+
+            <td>
+              ${band}
+            </td>
+
+            <td>
+              ${count}
+            </td>
+
+          </tr>
+
+        `
+      )
+
+      .join("");
+
+
+
+  $("#stateDataBody")
+    .innerHTML =
+
+    stateData
+
+      .map(
+        (x) => `
+
+          <tr>
+
+            <td>
+              ${esc(x.key)}
+            </td>
+
+            <td>
+              ${x.count}
+            </td>
+
+            <td>
+              ${fmt(x.avgPhysical)}%
+            </td>
+
+            <td>
+              ${fmt(x.avgRisk)}
+            </td>
+
+          </tr>
+
+        `
+      )
+
+      .join("")
+
+      ||
+      emptyRow(4);
 
 }
 
 
-// =====================================================
-// HISTORICAL FILTER
-// =====================================================
 
-function filterHistorical() {
+function emptyRow(colspan) {
 
-  const search =
+  return `
 
-    (
-      $("#historicalSearch")?.value ||
-      ""
+    <tr>
+
+      <td
+        colspan="${colspan}"
+        class="empty"
+      >
+        No data available.
+      </td>
+
+    </tr>
+
+  `;
+
+}
+
+
+
+/* =====================================================
+   KPI
+===================================================== */
+
+function renderKPIs(rows) {
+
+  const stats =
+    overallStats(rows);
+
+
+  const high =
+    rows.filter(
+      (p) =>
+        p.level === "High"
+    ).length;
+
+
+  const delay =
+    rows.filter(
+      (p) =>
+        p.delay_risk >= 70
+    ).length;
+
+
+  $("#kpiProjects")
+    .textContent =
+      fmt(
+        rows.length,
+        0
+      );
+
+
+  $("#kpiHigh")
+    .textContent =
+      fmt(
+        high,
+        0
+      );
+
+
+  $("#kpiCost")
+    .textContent =
+      money(
+        stats.revised
+      );
+
+
+  $("#kpiDelay")
+    .textContent =
+      fmt(
+        delay,
+        0
+      );
+
+
+  $("#kpiProgress")
+    .textContent =
+      `${fmt(stats.avgPhysical)}%`;
+
+
+  const top =
+    [...rows]
+      .sort(
+        (a, b) =>
+          b.risk - a.risk
+      )[0];
+
+
+  $("#summaryText")
+    .textContent =
+
+      rows.length
+
+        ? `${high} high-risk projects and ${delay} elevated delay-risk projects are present in ${labelMonth(currentMonth)}. ${
+            top
+              ? `Highest current risk: ${top.project_name}.`
+              : ""
+          }`
+
+        : "No projects match the selected filters.";
+
+}
+
+
+
+/* =====================================================
+   IMPORTANT PROJECTS
+===================================================== */
+
+function renderImportant(rows) {
+
+  const list =
+    [...rows]
+      .sort(
+        (a, b) =>
+          b.risk - a.risk
+      )
+      .slice(0, 8);
+
+
+  $("#importantProjects")
+    .innerHTML =
+
+      list
+
+        .map(
+          (p) => `
+
+            <tr
+              class="project-row"
+              data-project-id="${esc(p.project_id)}"
+            >
+
+              <td>
+
+                <div class="project-name">
+
+                  ${esc(p.project_name)}
+
+                  <small>
+                    ID ${esc(p.project_code)}
+                  </small>
+
+                </div>
+
+              </td>
+
+
+              <td>
+                ${esc(p.sector)}
+              </td>
+
+
+              <td>
+                ${esc(p.state)}
+              </td>
+
+
+              <td>
+                ${fmt(p.physical_progress)}%
+              </td>
+
+
+              <td>
+                ${
+                  p.cost_growth >= 0
+                    ? "+"
+                    : ""
+                }${fmt(p.cost_growth)}%
+              </td>
+
+
+              <td>
+                ${riskBadge(p)}
+              </td>
+
+            </tr>
+
+          `
+        )
+
+        .join("")
+
+        ||
+        emptyRow(6);
+
+
+  bindProjectRows(
+    $("#importantProjects")
+  );
+
+}
+
+
+
+/* =====================================================
+   PROJECT CLICK
+===================================================== */
+
+function bindProjectRows(
+  container
+) {
+
+  if (!container) return;
+
+
+  container
+    .querySelectorAll(
+      ".project-row"
     )
-      .toLowerCase()
-      .trim();
+    .forEach(
+      (row) => {
+
+        row.addEventListener(
+          "click",
+          () => {
+
+            const project =
+              allRows.find(
+                (p) =>
+                  String(
+                    p.project_id
+                  ) ===
+                  String(
+                    row.dataset.projectId
+                  )
+              );
 
 
-  const sector =
+            if (project) {
 
-    $("#historicalSector")?.value ||
-    "all";
+              openProjectModal(
+                project
+              );
 
+            }
 
-  historicalFiltered =
-
-    historicalProjects.filter(
-      row => {
-
-        const text = `
-
-          ${row.project_name || ""}
-
-          ${row.project_code || ""}
-
-          ${row.line_ministry || ""}
-
-          ${row.implementing_agency || ""}
-
-          ${row.sector || ""}
-
-        `.toLowerCase();
-
-
-        return (
-
-          (
-            !search ||
-            text.includes(search)
-          )
-
-          &&
-
-          (
-            sector === "all" ||
-            row.sector === sector
-          )
-
+          }
         );
 
       }
     );
 
-
-  historicalPage = 1;
-
-  renderHistoricalTable();
-
 }
 
 
-// =====================================================
-// SECTOR PAGE
-// =====================================================
 
-function renderSectorPage() {
+/* =====================================================
+   SELECTORS
+===================================================== */
 
-  const table =
-    $("#sectorTable");
+function populateSelectors() {
 
-
-  if (!table) {
-
-    return;
-
-  }
-
-
-  const stats =
-
-    sectorStats()
-      .sort(
-        (a, b) =>
-          b.count -
-          a.count
-      );
-
-
-  const total =
-    projects.length || 1;
-
-
-  table.innerHTML =
-
-    stats
-      .map(item => `
-
-        <tr>
-
-          <td>
-            <strong>
-              ${escapeHTML(
-                item.sector
-              )}
-            </strong>
-          </td>
-
-
-          <td>
-            ${fmt(item.count)}
-          </td>
-
-
-          <td>
-            ${pct(
-              item.count /
-              total *
-              100
-            )}
-          </td>
-
-
-          <td>
-            ${fmt(item.avgRisk)}
-          </td>
-
-
-          <td>
-            ${fmt(item.high)}
-          </td>
-
-
-          <td>
-            ₹${fmt(item.cost)} Cr
-          </td>
-
-        </tr>
-
-      `)
-      .join("");
-
-}
-
-
-// =====================================================
-// EARLY WARNINGS PAGE
-// =====================================================
-
-function renderWarnings() {
-
-  const box =
-    $("#warningGrid");
-
-
-  if (!box) {
-
-    return;
-
-  }
-
-
-  const warnings =
-
-    projects
-
-      .filter(
-        project =>
-
-          project.level === "High" ||
-
-          project.costRisk >= 70 ||
-
-          project.delayRisk >= 70 ||
-
-          project.physical < 50
+  const sectors =
+    [
+      ...new Set(
+        allRows
+          .map(
+            (p) => p.sector
+          )
+          .filter(Boolean)
       )
-
-      .sort(
-        (a, b) =>
-          b.risk -
-          a.risk
-      )
-
-      .slice(0, 12);
+    ].sort();
 
 
-  if (!warnings.length) {
+  [
+    "globalSector",
+    "projectSector"
+  ].forEach(
+    (id) => {
 
-    box.innerHTML = `
-
-      <article class="panel">
-
-        <h3>
-          No major warnings
-        </h3>
-
-        <p>
-          No high-priority indicators were detected.
-        </p>
-
-      </article>
-
-    `;
-
-    return;
-
-  }
+      const select =
+        $("#" + id);
 
 
-  box.innerHTML =
-
-    warnings
-      .map(project => {
-
-        const reason =
-          project.reasons?.[0] ||
-          "Risk indicator detected.";
+      if (!select) return;
 
 
-        return `
+      const old =
+        select.value;
 
-          <article
-            class="panel warning-card
-            ${
-              project.level === "High"
-                ? "critical"
-                : "attention"
-            }"
-          >
 
-            <div class="warning-head">
+      select.innerHTML =
 
-              <span
-                class="risk-badge ${project.level.toLowerCase()}"
+        `
+          <option value="all">
+            All Sectors
+          </option>
+        ` +
+
+        sectors
+          .map(
+            (sector) => `
+
+              <option
+                value="${esc(sector)}"
               >
-                ${project.level}
-              </span>
+                ${esc(sector)}
+              </option>
 
-              <time>
-                July 2026 signal
-              </time>
-
-            </div>
+            `
+          )
+          .join("");
 
 
-            <h3>
-              ${escapeHTML(
-                project.name
-              )}
-            </h3>
+      if (
+        sectors.includes(old)
+      ) {
 
+        select.value =
+          old;
 
-            <p>
-              ${escapeHTML(reason)}
-            </p>
+      }
 
-
-            <div class="warning-meta">
-
-              <span>
-                ${escapeHTML(
-                  project.sector
-                )}
-              </span>
-
-              <span>
-                ${escapeHTML(
-                  project.state
-                )}
-              </span>
-
-              <strong>
-                Risk ${fmt(
-                  project.risk
-                )}
-              </strong>
-
-            </div>
-
-          </article>
-
-        `;
-
-      })
-      .join("");
-
-}
-
-
-// =====================================================
-// PAGE NAVIGATION
-// =====================================================
-
-function showPage(name) {
-
-  $$(".page").forEach(
-    page =>
-      page.classList.remove(
-        "active"
-      )
-  );
-
-
-  $(`#page-${name}`)?.classList.add(
-    "active"
-  );
-
-
-  $$(".nav-item").forEach(
-    button =>
-      button.classList.toggle(
-        "active",
-        button.dataset.page === name
-      )
-  );
-
-
-  if ($("#pageCrumb")) {
-
-    $("#pageCrumb").textContent =
-      pageNames[name] || name;
-
-  }
-
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
-
-
-  $("#sidebar")?.classList.remove(
-    "open"
+    }
   );
 
 }
 
 
-// =====================================================
-// PROJECT FILTER
-// =====================================================
 
-function filterProjects() {
+/* =====================================================
+   PROJECT TABLE
+===================================================== */
+
+function renderProjectTable(rows) {
 
   const search =
-
     (
-      $("#projectSearch")?.value ||
+      $("#projectSearch")
+        ?.value ||
       ""
     )
-      .toLowerCase()
-      .trim();
-
-
-  const risk =
-
-    $("#projectRisk")?.value ||
-    "all";
+      .trim()
+      .toLowerCase();
 
 
   const sector =
-
-    $("#projectSector")?.value ||
+    $("#projectSector")
+      ?.value ||
     "all";
 
 
-  const filtered =
+  const risk =
+    $("#projectRisk")
+      ?.value ||
+    "all";
 
-    projects.filter(
-      project => {
 
-        const text = `
+  const list =
+    rows.filter(
+      (p) => {
 
-          ${project.name}
+        const haystack =
 
-          ${project.state}
-
-          ${project.sector}
-
-          ${project.id}
-
-        `.toLowerCase();
+          `${p.project_name} ${p.project_code} ${p.state} ${p.line_ministry}`
+            .toLowerCase();
 
 
         return (
 
+          (!search ||
+            haystack.includes(
+              search
+            ))
+
+          &&
+
           (
-            !search ||
-            text.includes(search)
+            sector === "all" ||
+            p.sector === sector
           )
 
           &&
 
           (
             risk === "all" ||
-            project.level === risk
-          )
-
-          &&
-
-          (
-            sector === "all" ||
-            project.sector === sector
+            p.level.toLowerCase() ===
+              risk
           )
 
         );
@@ -3237,1102 +2013,498 @@ function filterProjects() {
     );
 
 
-  renderProjectTable(
-    filtered
+  $("#projectCountLabel")
+    .textContent =
+      fmt(
+        list.length,
+        0
+      );
+
+
+  $("#projectTable")
+    .innerHTML =
+
+      list
+        .slice(0, 500)
+
+        .map(
+          (p) => `
+
+            <tr
+              class="project-row"
+              data-project-id="${esc(p.project_id)}"
+            >
+
+              <td>
+
+                <div class="project-name">
+
+                  ${esc(p.project_name)}
+
+                  <small>
+                    ${esc(p.project_code)}
+                  </small>
+
+                </div>
+
+              </td>
+
+
+              <td>
+                ${esc(p.line_ministry)}
+              </td>
+
+
+              <td>
+                ${esc(p.sector)}
+              </td>
+
+
+              <td>
+                ${esc(p.state)}
+              </td>
+
+
+              <td>
+                ${money(p.original_cost)}
+              </td>
+
+
+              <td>
+                ${money(p.current_cost)}
+              </td>
+
+
+              <td>
+                ${fmt(p.physical_progress)}%
+              </td>
+
+
+              <td>
+                ${riskBadge(p)}
+              </td>
+
+            </tr>
+
+          `
+        )
+
+        .join("")
+
+        ||
+        emptyRow(8);
+
+
+  bindProjectRows(
+    $("#projectTable")
   );
 
 }
 
 
-// =====================================================
-// AI ASSISTANT
-// =====================================================
 
-function addMessage(
-  text,
-  user = false
-) {
+/* =====================================================
+   RISK PAGE
+===================================================== */
 
-  const box =
-    $("#messages");
+function renderRiskPage(rows) {
 
-
-  if (!box) {
-
-    return;
-
-  }
+  const high =
+    rows.filter(
+      (p) =>
+        p.level === "High"
+    ).length;
 
 
-  const element =
-    document.createElement("div");
+  const medium =
+    rows.filter(
+      (p) =>
+        p.level === "Medium"
+    ).length;
 
 
-  element.className =
-    `message ${
-      user
-        ? "user"
-        : "bot"
-    }`;
+  const low =
+    rows.length -
+    high -
+    medium;
 
 
-  element.innerHTML =
-
-    user
-
-      ? `
-
-        <div>
-
-          <p>
-            ${escapeHTML(text)}
-          </p>
-
-          <time>
-            Now
-          </time>
-
-        </div>
-
-      `
-
-      : `
-
-        <div class="bot-avatar">
-          ✦
-        </div>
-
-        <div>
-
-          <p>
-            ${text}
-          </p>
-
-          <time>
-            Now
-          </time>
-
-        </div>
-
-      `;
+  $("#riskHighCount")
+    .textContent =
+      fmt(
+        high,
+        0
+      );
 
 
-  box.appendChild(
-    element
-  );
+  $("#riskMediumCount")
+    .textContent =
+      fmt(
+        medium,
+        0
+      );
 
 
-  box.scrollTop =
-    box.scrollHeight;
-
-}
-
-
-// =====================================================
-// LOCAL AI
-// =====================================================
-
-function localAI(question) {
-
-  const q =
-    question
-      .toLowerCase();
+  $("#riskLowCount")
+    .textContent =
+      fmt(
+        low,
+        0
+      );
 
 
-  /*
-    Highest risk
-  */
+  const states =
+    aggregate(
+      rows,
+      "state"
+    )
+      .filter(
+        (x) =>
+          x.key !==
+          "Other / Not detected"
+      );
 
-  if (
-    q.includes("highest") &&
-    q.includes("risk")
-  ) {
 
-    const top =
+  $("#topRiskState")
+    .textContent =
 
-      projects
-        .slice()
+      states.sort(
+        (a, b) =>
+          b.avgRisk -
+          a.avgRisk
+      )[0]?.key ||
+      "—";
+
+
+  $("#riskTable")
+    .innerHTML =
+
+      [...rows]
+
         .sort(
           (a, b) =>
             b.risk -
             a.risk
         )
-        .slice(0, 3);
 
+        .slice(0, 300)
 
-    if (!top.length) {
-
-      return "No project data is currently loaded.";
-
-    }
-
-
-    return `
-
-      The highest current risk projects are:
-
-      ${top
         .map(
-          project =>
-            `<b>${escapeHTML(
-              project.name
-            )}</b>
-            (${fmt(project.risk)}/100)`
-        )
-        .join(", ")}.
+          (p) => `
 
-    `;
+            <tr
+              class="project-row"
+              data-project-id="${esc(p.project_id)}"
+            >
 
-  }
+              <td>
 
+                <div class="project-name">
 
-  /*
-    Transport
-  */
+                  ${esc(p.project_name)}
 
-  if (
-    q.includes("transport")
-  ) {
+                  <small>
+                    ${esc(p.project_code)}
+                  </small>
 
-    const transportProjects =
+                </div>
 
-      projects.filter(
-        project =>
-
-          project.sector
-            .toLowerCase()
-            .includes("transport")
-
-          &&
-
-          project.level === "High"
-      )
-      .slice(0, 5);
+              </td>
 
 
-    if (!transportProjects.length) {
-
-      return `
-        No high-risk transport projects
-        were found in the current dataset.
-      `;
-
-    }
+              <td>
+                ${esc(p.state)}
+              </td>
 
 
-    return `
-
-      Found
-
-      <b>
-        ${transportProjects.length}
-      </b>
-
-      high-risk transport projects:
-
-      ${transportProjects
-        .map(
-          project =>
-            `<b>${escapeHTML(
-              project.name
-            )}</b>`
-        )
-        .join(", ")}.
-
-    `;
-
-  }
+              <td>
+                ${esc(p.sector)}
+              </td>
 
 
-  /*
-    Cost
-  */
-
-  if (
-    q.includes("cost")
-  ) {
-
-    const averageMovement =
-
-      projects.length
-
-        ? projects.reduce(
-            (sum, project) => {
-
-              if (!project.original) {
-
-                return sum;
-
-              }
+              <td>
+                ${fmt(p.cost_risk)}
+              </td>
 
 
-              return sum +
+              <td>
+                ${fmt(p.delay_risk)}
+              </td>
 
-                (
-                  (
-                    project.current -
-                    project.original
+
+              <td>
+                ${riskBadge(p)}
+              </td>
+
+
+              <td>
+
+                ${
+                  esc(
+                    p.cost_growth >= 10
+                      ? `Cost increased ${p.cost_growth.toFixed(1)}%`
+                      : p.financial_progress <
+                          p.physical_progress
+                        ? "Financial progress trails physical progress"
+                        : "No major indicator"
                   )
+                }
 
-                  /
+              </td>
 
-                  project.original
+            </tr>
 
-                ) * 100;
-
-            },
-            0
-          ) / projects.length
-
-        : 0;
-
-
-    return `
-
-      Across the July 2026 portfolio,
-      the average current-vs-original
-      cost movement is approximately
-
-      <b>
-        ${pct(averageMovement)}
-      </b>.
-
-    `;
-
-  }
-
-
-  /*
-    Delay
-  */
-
-  if (
-    q.includes("delay")
-  ) {
-
-    const count =
-
-      projects.filter(
-        project =>
-          project.delayRisk >= 70
-      ).length;
-
-
-    return `
-
-      <b>
-        ${fmt(count)}
-      </b>
-
-      projects currently have
-      derived delay risk at or above 70%.
-
-    `;
-
-  }
-
-
-  /*
-    Portfolio
-  */
-
-  if (
-    q.includes("main") ||
-    q.includes("portfolio")
-  ) {
-
-    const high =
-
-      projects.filter(
-        project =>
-          project.level === "High"
-      ).length;
-
-
-    const averageRisk =
-
-      projects.length
-
-        ? projects.reduce(
-            (sum, project) =>
-              sum + project.risk,
-            0
-          ) / projects.length
-
-        : 0;
-
-
-    return `
-
-      The July 2026 portfolio contains
-
-      <b>
-        ${fmt(projects.length)}
-      </b>
-
-      monitored projects,
-
-      with
-
-      <b>
-        ${fmt(high)}
-      </b>
-
-      high-risk projects and an
-      average derived risk score of
-
-      <b>
-        ${fmt(averageRisk)}/100
-      </b>.
-
-    `;
-
-  }
-
-
-  /*
-    Specific project
-  */
-
-  const project =
-
-    projects.find(
-      item =>
-        q.includes(
-          item.name.toLowerCase()
+          `
         )
-    );
+
+        .join("")
+
+        ||
+        emptyRow(7);
 
 
-  if (project) {
-
-    return `
-
-      <b>
-        ${escapeHTML(
-          project.name
-        )}
-      </b>
-
-      <br><br>
-
-      Sector:
-      <b>
-        ${escapeHTML(
-          project.sector
-        )}
-      </b>
-
-      <br>
-
-      State:
-      <b>
-        ${escapeHTML(
-          project.state
-        )}
-      </b>
-
-      <br>
-
-      Overall risk:
-      <b>
-        ${fmt(project.risk)}/100
-      </b>
-
-      <br>
-
-      Cost risk:
-      <b>
-        ${fmt(project.costRisk)}%
-      </b>
-
-      <br>
-
-      Delay risk:
-      <b>
-        ${fmt(project.delayRisk)}%
-      </b>
-
-      <br>
-
-      Physical progress:
-      <b>
-        ${pct(project.physical)}
-      </b>
-
-      <br>
-
-      Financial progress:
-      <b>
-        ${pct(project.financial)}
-      </b>
-
-    `;
-
-  }
-
-
-  return `
-
-    I can analyze the July 2026
-    PAIMANA project dataset.
-
-    <br><br>
-
-    Try asking about:
-
-    <br><br>
-
-    • Highest risk projects
-
-    <br>
-
-    • Cost risk
-
-    <br>
-
-    • Delay risk
-
-    <br>
-
-    • Transport projects
-
-    <br>
-
-    • Physical progress
-
-    <br>
-
-    • A specific project
-
-  `;
+  bindProjectRows(
+    $("#riskTable")
+  );
 
 }
 
 
-// =====================================================
-// CSV EXPORT
-// =====================================================
 
-function exportCSV(
-  rows,
-  filename
+/* =====================================================
+   MINI KPIs
+===================================================== */
+
+function makeMiniKpis(
+  target,
+  stats
 ) {
 
-  if (!rows.length) {
+  $(target)
+    .innerHTML =
 
-    toast(
-      "No data available"
-    );
+      [
 
-    return;
-
-  }
-
-
-  const keys =
-    Object.keys(rows[0]);
-
-
-  const csv = [
-
-    keys.join(","),
-
-    ...rows.map(
-      row =>
-
-        keys
-          .map(
-            key =>
-              `"${String(
-                row[key] ?? ""
-              ).replace(
-                /"/g,
-                '""'
-              )}"`
+        [
+          "Projects",
+          fmt(
+            stats.count,
+            0
           )
-          .join(",")
-    )
-
-  ].join("\n");
-
-
-  const blob =
-    new Blob(
-      [csv],
-      {
-        type:
-          "text/csv;charset=utf-8"
-      }
-    );
-
-
-  const url =
-    URL.createObjectURL(
-      blob
-    );
-
-
-  const link =
-    document.createElement("a");
-
-
-  link.href =
-    url;
-
-
-  link.download =
-    filename;
-
-
-  link.click();
-
-
-  URL.revokeObjectURL(
-    url
-  );
-
-
-  toast(
-    "Export prepared"
-  );
-
-}
-
-
-// =====================================================
-// REPORTS
-// =====================================================
-
-function report(type) {
-
-  if (
-    type === "historical"
-  ) {
-
-    exportCSV(
-      historicalProjects,
-      "paimana_historical_projects.csv"
-    );
-
-    return;
-
-  }
-
-
-  if (
-    type === "cost"
-  ) {
-
-    exportCSV(
-
-      projects.map(
-        project => ({
-
-          project:
-            project.name,
-
-          sector:
-            project.sector,
-
-          original_cost:
-            project.original,
-
-          current_cost:
-            project.current,
-
-          physical_progress:
-            project.physical,
-
-          financial_progress:
-            project.financial
-
-        })
-      ),
-
-      "paimana_cost_snapshot.csv"
-
-    );
-
-    return;
-
-  }
-
-
-  if (
-    type === "schedule"
-  ) {
-
-    exportCSV(
-
-      projects.map(
-        project => ({
-
-          project:
-            project.name,
-
-          sector:
-            project.sector,
-
-          delay_risk:
-            project.delayRisk,
-
-          physical_progress:
-            project.physical,
-
-          overall_risk:
-            project.risk
-
-        })
-      ),
-
-      "paimana_schedule_snapshot.csv"
-
-    );
-
-    return;
-
-  }
-
-
-  exportCSV(
-
-    projects.map(
-      project => ({
-
-        project:
-          project.name,
-
-        sector:
-          project.sector,
-
-        state:
-          project.state,
-
-        risk:
-          project.risk,
-
-        cost_risk:
-          project.costRisk,
-
-        delay_risk:
-          project.delayRisk,
-
-        level:
-          project.level
-
-      })
-    ),
-
-    "paimana_risk_snapshot.csv"
-
-  );
-
-}
-
-
-// =====================================================
-// TOAST
-// =====================================================
-
-function toast(message) {
-
-  const element =
-    $("#toast");
-
-
-  if (!element) {
-
-    return;
-
-  }
-
-
-  element.textContent =
-    message;
-
-
-  element.classList.add(
-    "show"
-  );
-
-
-  clearTimeout(
-    window.__toast
-  );
-
-
-  window.__toast =
-
-    setTimeout(
-      () =>
-        element.classList.remove(
-          "show"
-        ),
-      2200
-    );
-
-}
-
-
-// =====================================================
-// RESET PROJECT FILTERS
-// =====================================================
-
-function resetProjectFilters() {
-
-  if ($("#projectSearch")) {
-
-    $("#projectSearch").value =
-      "";
-
-  }
-
-
-  if ($("#projectRisk")) {
-
-    $("#projectRisk").value =
-      "all";
-
-  }
-
-
-  if ($("#projectSector")) {
-
-    $("#projectSector").value =
-      "all";
-
-  }
-
-
-  renderProjectTable();
-
-}
-
-
-// =====================================================
-// RENDER EVERYTHING
-// =====================================================
-
-function renderAll() {
-
-  /*
-    Dashboard
-  */
-
-  renderDashboardKPIs();
-
-  renderRiskDistribution();
-
-  renderSectorBars();
-
-  renderRiskTable();
-
-  renderDashboardWarnings();
-
-  renderPortfolioInsight();
-
-
-  /*
-    Project pages
-  */
-
-  renderProjectTable();
-
-  renderProgress();
-
-  renderCost();
-
-  renderSchedule();
-
-
-  /*
-    Risk
-  */
-
-  renderRiskAnalytics();
-
-
-  /*
-    Historical
-  */
-
-  renderHistorical();
-
-
-  /*
-    Monitoring
-  */
-
-  renderWarnings();
-
-  renderSectorPage();
-
-}
-
-
-// =====================================================
-// EVENTS
-// =====================================================
-
-function setupEvents() {
-
-
-  // Sidebar navigation
-
-  $$(".nav-item").forEach(
-    button => {
-
-      button.addEventListener(
-        "click",
-        () =>
-          showPage(
-            button.dataset.page
+        ],
+
+        [
+          "Original",
+          money(
+            stats.original
           )
-      );
+        ],
 
-    }
-  );
-
-
-  // Internal page links
-
-  $$("[data-page-link]").forEach(
-    button => {
-
-      button.addEventListener(
-        "click",
-        () =>
-          showPage(
-            button.dataset.pageLink
+        [
+          "Revised",
+          money(
+            stats.revised
           )
-      );
+        ],
 
-    }
-  );
+        [
+          "Avg Progress",
+          `${fmt(
+            stats.avgPhysical
+          )}%`
+        ],
 
+        [
+          "Avg Risk",
+          fmt(
+            stats.avgRisk
+          )
+        ]
 
-  // Mobile sidebar
+      ]
 
-  $("#mobileMenu")?.addEventListener(
-    "click",
-    () =>
-      $("#sidebar")?.classList.toggle(
-        "open"
-      )
-  );
+        .map(
+          ([label, value]) => `
 
+            <div class="mini-kpi">
 
-  // Notifications
+              <span>
+                ${label}
+              </span>
 
-  $("#notifyBtn")?.addEventListener(
-    "click",
-    () =>
-      showPage("warnings")
-  );
+              <strong>
+                ${value}
+              </strong>
 
+            </div>
 
-  // Refresh
-
-  $("#refreshBtn")?.addEventListener(
-    "click",
-    async () => {
-
-      toast(
-        "Refreshing July 2026 data..."
-      );
-
-      await loadBackendData();
-
-    }
-  );
-
-
-  // Dashboard export
-
-  $("#exportBtn")?.addEventListener(
-    "click",
-    () =>
-      report("risk")
-  );
-
-
-  // Project filters
-
-  $("#projectSearch")
-    ?.addEventListener(
-      "input",
-      filterProjects
-    );
-
-
-  $("#projectRisk")
-    ?.addEventListener(
-      "change",
-      filterProjects
-    );
-
-
-  $("#projectSector")
-    ?.addEventListener(
-      "change",
-      filterProjects
-    );
-
-
-  $("#projectReset")
-    ?.addEventListener(
-      "click",
-      resetProjectFilters
-    );
-
-
-  // Sector chart selector
-
-  $("#sectorMetric")
-    ?.addEventListener(
-      "change",
-      event =>
-        renderSectorBars(
-          event.target.value
+          `
         )
-    );
+
+        .join("");
+
+}
 
 
-  // Historical filters
 
-  $("#historicalSearch")
-    ?.addEventListener(
-      "input",
-      filterHistorical
-    );
+/* =====================================================
+   MINISTRY / SECTOR CHOICE DATA
+===================================================== */
 
+function getMinistryItems(rows) {
 
-  $("#historicalSector")
-    ?.addEventListener(
-      "change",
-      filterHistorical
-    );
+  return [
 
+    "All Ministries",
 
-  // Historical pagination
+    ...aggregate(
+      rows,
+      "line_ministry"
+    )
+      .map(
+        (x) => x.key
+      )
+      .sort()
 
-  $("#histPrev")
-    ?.addEventListener(
-      "click",
-      () => {
+  ];
 
-        if (
-          historicalPage > 1
-        ) {
-
-          historicalPage--;
-
-          renderHistoricalTable();
-
-        }
-
-      }
-    );
+}
 
 
-  $("#histNext")
-    ?.addEventListener(
-      "click",
-      () => {
 
-        const pages =
+function getSectorItems(rows) {
 
-          Math.max(
-            1,
-            Math.ceil(
-              historicalFiltered.length /
-              HIST_PAGE_SIZE
-            )
-          );
+  return [
 
+    "All Sectors",
 
-        if (
-          historicalPage < pages
-        ) {
+    ...aggregate(
+      rows,
+      "sector"
+    )
+      .map(
+        (x) => x.key
+      )
+      .sort()
 
-          historicalPage++;
+  ];
 
-          renderHistoricalTable();
-
-        }
-
-      }
-    );
+}
 
 
-  // AI chat
 
-  $("#chatForm")
-    ?.addEventListener(
-      "submit",
-      event => {
+/* =====================================================
+   SLIDER
+===================================================== */
 
-        event.preventDefault();
+function renderChoiceSlider(
+  type,
+  rows
+) {
 
-
-        const input =
-          $("#chatInput");
-
-
-        const question =
-          input?.value.trim();
+  const isMinistry =
+    type === "ministry";
 
 
-        if (!question) {
+  const items =
+    isMinistry
+      ? getMinistryItems(rows)
+      : getSectorItems(rows);
 
-          return;
 
-        }
+  const offset =
+    isMinistry
+      ? ministryOffset
+      : sectorOffset;
 
 
-        addMessage(
-          question,
-          true
+  const selected =
+    isMinistry
+      ? selectedMinistry
+      : selectedSector;
+
+
+  const visible =
+
+    items.length <= 5
+
+      ? items
+
+      : Array.from(
+          {
+            length:
+              Math.min(
+                5,
+                items.length
+              )
+          },
+          (_, i) =>
+            items[
+              offset + i
+            ]
         );
 
 
-        input.value =
-          "";
+  const container =
 
-
-        setTimeout(
-          () =>
-            addMessage(
-              localAI(question)
-            ),
-          200
-        );
-
-      }
+    $(
+      isMinistry
+        ? "#ministryChoices"
+        : "#sectorChoices"
     );
 
 
-  // AI suggestion buttons
+  container.innerHTML =
 
-  $$(".suggestions button")
+    visible
+
+      .map(
+        (item) => `
+
+          <button
+            class="choice-item ${
+              item === selected
+                ? "active"
+                : ""
+            }"
+            data-value="${esc(item)}"
+          >
+            ${esc(item)}
+          </button>
+
+        `
+      )
+
+      .join("");
+
+
+  container
+    .querySelectorAll(
+      "button"
+    )
     .forEach(
-      button => {
+      (button) => {
 
         button.addEventListener(
           "click",
           () => {
 
-            const input =
-              $("#chatInput");
+            if (isMinistry) {
+
+              selectedMinistry =
+                button.dataset.value;
+
+            } else {
+
+              selectedSector =
+                button.dataset.value;
+
+            }
 
 
-            input.value =
-              button.dataset.prompt;
-
-
-            $("#chatForm")
-              ?.requestSubmit();
+            renderAnalysisPage(
+              rows
+            );
 
           }
         );
@@ -4341,25 +2513,1258 @@ function setupEvents() {
     );
 
 
-  // Reports
-
-  $("#reportBtn")
-    ?.addEventListener(
-      "click",
-      () =>
-        report("risk")
+  const prev =
+    $(
+      isMinistry
+        ? "#ministryPrev"
+        : "#sectorPrev"
     );
 
 
-  $$(".report-action")
+  const next =
+    $(
+      isMinistry
+        ? "#ministryNext"
+        : "#sectorNext"
+    );
+
+
+  const position =
+    $(
+      isMinistry
+        ? "#ministryPosition"
+        : "#sectorPosition"
+    );
+
+
+  prev.disabled =
+    items.length <= 5;
+
+
+  next.disabled =
+    items.length <= 5;
+
+
+  position.textContent =
+
+    items.length
+
+      ? `${Math.min(
+          offset + 1,
+          items.length
+        )} / ${items.length}`
+
+      : "0 / 0";
+
+}
+
+
+
+/* =====================================================
+   MINISTRY DETAIL
+===================================================== */
+
+function renderMinistryDetail(
+  rows
+) {
+
+  const list =
+
+    selectedMinistry ===
+    "All Ministries"
+
+      ? rows
+
+      : rows.filter(
+          (p) =>
+            p.line_ministry ===
+            selectedMinistry
+        );
+
+
+  $("#ministryTitle")
+    .textContent =
+      selectedMinistry;
+
+
+  makeMiniKpis(
+    "#ministryKpis",
+    overallStats(list)
+  );
+
+
+  const sectors =
+    aggregate(
+      list,
+      "sector"
+    );
+
+
+  $("#ministrySectorTable")
+    .innerHTML =
+
+      sectors
+
+        .map(
+          (x) => `
+
+            <tr>
+
+              <td>
+                ${esc(x.key)}
+              </td>
+
+              <td>
+                ${x.count}
+              </td>
+
+              <td>
+                ${money(x.original)}
+              </td>
+
+              <td>
+                ${money(x.revised)}
+              </td>
+
+              <td>
+                ${fmt(
+                  x.avgPhysical
+                )}%
+              </td>
+
+              <td>
+                ${fmt(
+                  x.avgRisk
+                )}
+              </td>
+
+            </tr>
+
+          `
+        )
+
+        .join("")
+
+        ||
+        emptyRow(6);
+
+
+  makeChart(
+    "#ministrySectorChart",
+    "bar",
+    {
+
+      labels:
+        sectors
+          .slice(0, 12)
+          .map(
+            (x) =>
+              x.key
+          ),
+
+      datasets: [
+
+        {
+
+          label:
+            "Projects",
+
+          data:
+            sectors
+              .slice(0, 12)
+              .map(
+                (x) =>
+                  x.count
+              ),
+
+          backgroundColor:
+            "#315b7e",
+
+          borderRadius:
+            4
+
+        }
+
+      ]
+
+    },
+
+    {
+
+      plugins: {
+
+        legend: {
+          display: false
+        }
+
+      },
+
+      scales: {
+
+        y: {
+
+          beginAtZero:
+            true,
+
+          ticks: {
+            precision: 0
+          }
+
+        }
+
+      }
+
+    }
+
+  );
+
+}
+
+
+
+/* =====================================================
+   SECTOR DETAIL
+===================================================== */
+
+function renderSectorDetail(
+  rows
+) {
+
+  const list =
+
+    selectedSector ===
+    "All Sectors"
+
+      ? rows
+
+      : rows.filter(
+          (p) =>
+            p.sector ===
+            selectedSector
+        );
+
+
+  $("#sectorTitle")
+    .textContent =
+      selectedSector;
+
+
+  makeMiniKpis(
+    "#sectorKpis",
+    overallStats(list)
+  );
+
+
+  const riskCounts = [
+
+    list.filter(
+      (p) =>
+        p.level === "High"
+    ).length,
+
+    list.filter(
+      (p) =>
+        p.level === "Medium"
+    ).length,
+
+    list.filter(
+      (p) =>
+        p.level === "Low"
+    ).length
+
+  ];
+
+
+  makeChart(
+    "#sectorRiskChart",
+    "doughnut",
+    {
+
+      labels: [
+        "High",
+        "Medium",
+        "Low"
+      ],
+
+      datasets: [
+
+        {
+
+          data:
+            riskCounts,
+
+          backgroundColor: [
+
+            "#c73545",
+            "#d9a116",
+            "#2f8f59"
+
+          ],
+
+          borderColor:
+            "#fff",
+
+          borderWidth:
+            2
+
+        }
+
+      ]
+
+    }
+  );
+
+
+  const ministries =
+    aggregate(
+      list,
+      "line_ministry"
+    );
+
+
+  $("#sectorMinistryTable")
+    .innerHTML =
+
+      ministries
+
+        .map(
+          (x) => `
+
+            <tr>
+
+              <td>
+                ${esc(x.key)}
+              </td>
+
+              <td>
+                ${x.count}
+              </td>
+
+              <td>
+                ${money(
+                  x.original
+                )}
+              </td>
+
+              <td>
+                ${money(
+                  x.revised
+                )}
+              </td>
+
+              <td>
+                ${fmt(
+                  x.avgPhysical
+                )}%
+              </td>
+
+              <td>
+                ${fmt(
+                  x.avgRisk
+                )}
+              </td>
+
+            </tr>
+
+          `
+        )
+
+        .join("")
+
+        ||
+        emptyRow(6);
+
+}
+
+
+
+/* =====================================================
+   ANALYSIS PAGE
+===================================================== */
+
+function renderAnalysisPage(
+  rows
+) {
+
+  const ministryItems =
+    getMinistryItems(
+      rows
+    );
+
+
+  const sectorItems =
+    getSectorItems(
+      rows
+    );
+
+
+  if (
+    !ministryItems.includes(
+      selectedMinistry
+    )
+  ) {
+
+    selectedMinistry =
+      "All Ministries";
+
+  }
+
+
+  if (
+    !sectorItems.includes(
+      selectedSector
+    )
+  ) {
+
+    selectedSector =
+      "All Sectors";
+
+  }
+
+
+  ministryOffset =
+    Math.min(
+      ministryOffset,
+      Math.max(
+        0,
+        ministryItems.length - 1
+      )
+    );
+
+
+  sectorOffset =
+    Math.min(
+      sectorOffset,
+      Math.max(
+        0,
+        sectorItems.length - 1
+      )
+    );
+
+
+  renderChoiceSlider(
+    "ministry",
+    rows
+  );
+
+
+  renderChoiceSlider(
+    "sector",
+    rows
+  );
+
+
+  renderMinistryDetail(
+    rows
+  );
+
+
+  renderSectorDetail(
+    rows
+  );
+
+}
+
+
+
+/* =====================================================
+   MAP COLORS
+===================================================== */
+
+function stateRiskColor(
+  avgRisk,
+  hasData
+) {
+
+  if (!hasData) {
+
+    return "#dce6ec";
+
+  }
+
+
+  if (avgRisk >= 75) {
+
+    return "#c73545";
+
+  }
+
+
+  if (avgRisk >= 40) {
+
+    return "#d9a116";
+
+  }
+
+
+  return "#2f8f59";
+
+}
+
+
+
+/* =====================================================
+   GEOJSON STATE
+===================================================== */
+
+function stateFromGeoJSON(
+  feature
+) {
+
+  return normalizeState(
+
+    feature?.properties?.name ||
+
+    feature?.properties?.NAME_1 ||
+
+    feature?.properties?.st_nm ||
+
+    feature?.properties?.STATE_NAME ||
+
+    ""
+
+  );
+
+}
+
+
+
+/* =====================================================
+   MAP DATA
+===================================================== */
+
+function renderMapData(
+  rows
+) {
+
+  const stateStats =
+    {};
+
+
+  aggregate(
+    rows,
+    "state"
+  ).forEach(
+    (x) => {
+
+      stateStats[
+        normalizeState(
+          x.key
+        )
+      ] = x;
+
+    }
+  );
+
+
+  if (!mapLayer) {
+
+    return;
+
+  }
+
+
+  mapLayer.eachLayer(
+    (layer) => {
+
+      const state =
+        stateFromGeoJSON(
+          layer.feature
+        );
+
+
+      const stat =
+        stateStats[state];
+
+
+      layer.setStyle({
+
+        fillColor:
+          stateRiskColor(
+            stat?.avgRisk || 0,
+            Boolean(stat)
+          ),
+
+        fillOpacity:
+          stat
+            ? 0.78
+            : 0.28,
+
+        color:
+          "#ffffff",
+
+        weight:
+          1
+
+      });
+
+
+      layer.bindTooltip(
+
+        `
+
+          <strong>
+            ${esc(state)}
+          </strong>
+
+          <br>
+
+          ${
+            stat
+
+              ? `${fmt(
+                  stat.count,
+                  0
+                )} projects · Avg risk ${fmt(
+                  stat.avgRisk
+                )}`
+
+              : "No project data"
+          }
+
+        `,
+
+        {
+          sticky:
+            true,
+
+          direction:
+            "top"
+
+        }
+
+      );
+
+    }
+  );
+
+}
+
+
+
+/* =====================================================
+   MAP PANEL
+===================================================== */
+
+function updateMapPanel(
+  state,
+  clicked = false
+) {
+
+  const rows =
+
+    state === "All India"
+
+      ? filteredRows
+
+      : filteredRows.filter(
+          (p) =>
+            normalizeState(
+              p.state
+            ) ===
+            normalizeState(
+              state
+            )
+        );
+
+
+  const stats =
+    overallStats(rows);
+
+
+  $("#mapStateTitle")
+    .textContent =
+      state;
+
+
+  $("#mapStateSub")
+    .textContent =
+
+      state === "All India"
+
+        ? "Selected month portfolio summary"
+
+        : clicked
+
+          ? "Selected state — click a project below for more detail"
+
+          : "Hovering selected state";
+
+
+  $("#mapProjects")
+    .textContent =
+      fmt(
+        stats.count,
+        0
+      );
+
+
+  $("#mapOriginal")
+    .textContent =
+      money(
+        stats.original
+      );
+
+
+  $("#mapRevised")
+    .textContent =
+      money(
+        stats.revised
+      );
+
+
+  $("#mapProgress")
+    .textContent =
+      `${fmt(
+        stats.avgPhysical
+      )}%`;
+
+
+  $("#mapRisk")
+    .textContent =
+      fmt(
+        stats.avgRisk
+      );
+
+
+  $("#mapHigh")
+    .textContent =
+      fmt(
+        rows.filter(
+          (p) =>
+            p.level === "High"
+        ).length,
+        0
+      );
+
+
+  $("#stateDetailTitle")
+    .textContent =
+      `${state} — detailed project information`;
+
+
+  $("#stateDetailSub")
+    .textContent =
+
+      `${labelMonth(
+        currentMonth
+      )} · ${rows.length} project record${
+        rows.length === 1
+          ? ""
+          : "s"
+      }`;
+
+
+  $("#stateDetailBody")
+    .innerHTML =
+
+      rows.length
+
+        ? rows
+
+            .slice()
+
+            .sort(
+              (a, b) =>
+                b.risk -
+                a.risk
+            )
+
+            .slice(0, 12)
+
+            .map(
+              (p) => `
+
+                <tr
+                  class="project-row"
+                  data-project-id="${esc(
+                    p.project_id
+                  )}"
+                >
+
+                  <td>
+
+                    ${esc(
+                      p.project_name
+                    )}
+
+                    <small>
+                      ${esc(
+                        p.project_code
+                      )}
+                    </small>
+
+                  </td>
+
+                  <td>
+                    ${esc(
+                      p.sector
+                    )}
+                  </td>
+
+                  <td>
+                    ${money(
+                      p.current_cost
+                    )}
+                  </td>
+
+                  <td>
+                    ${fmt(
+                      p.physical_progress
+                    )}%
+                  </td>
+
+                  <td>
+                    ${riskBadge(p)}
+                  </td>
+
+                </tr>
+
+              `
+            )
+
+            .join("")
+
+        : emptyRow(5);
+
+
+  bindProjectRows(
+    $("#stateDetailBody")
+  );
+
+}
+
+
+
+/* =====================================================
+   MAP INITIALIZATION
+===================================================== */
+
+async function initMap() {
+
+  if (
+    mapReady ||
+    !$("#indiaMap") ||
+    typeof L ===
+      "undefined"
+  ) {
+
+    return;
+
+  }
+
+
+  map =
+    L.map(
+      "indiaMap",
+      {
+
+        zoomControl:
+          false,
+
+        scrollWheelZoom:
+          false,
+
+        attributionControl:
+          true
+
+      }
+    )
+      .setView(
+        [22.5, 79],
+        4.7
+      );
+
+
+  L.control.zoom(
+    {
+      position:
+        "bottomright"
+    }
+  )
+    .addTo(map);
+
+
+  try {
+
+    const geo =
+      await fetch(
+        GEOJSON_URL
+      ).then(
+        (response) => {
+
+          if (!response.ok) {
+
+            throw new Error(
+              "GeoJSON unavailable"
+            );
+
+          }
+
+          return response.json();
+
+        }
+      );
+
+
+    mapLayer =
+      L.geoJSON(
+        geo,
+        {
+
+          style: {
+
+            fillColor:
+              "#dce6ec",
+
+            fillOpacity:
+              0.35,
+
+            color:
+              "#fff",
+
+            weight:
+              1
+
+          },
+
+
+          onEachFeature:
+            (
+              feature,
+              layer
+            ) => {
+
+              layer.on({
+
+                mouseover:
+                  () => {
+
+                    const state =
+                      stateFromGeoJSON(
+                        feature
+                      );
+
+
+                    updateMapPanel(
+                      state,
+                      false
+                    );
+
+
+                    layer.setStyle({
+
+                      weight:
+                        2,
+
+                      fillOpacity:
+                        0.95
+
+                    });
+
+
+                    $("#mapTip")
+                      .textContent =
+                        state;
+
+                  },
+
+
+                mouseout:
+                  () => {
+
+                    renderMapData(
+                      filteredRows
+                    );
+
+
+                    if (
+                      selectedMapState
+                    ) {
+
+                      updateMapPanel(
+                        selectedMapState,
+                        true
+                      );
+
+                    } else {
+
+                      updateMapPanel(
+                        "All India",
+                        false
+                      );
+
+                    }
+
+                  },
+
+
+                click:
+                  () => {
+
+                    selectedMapState =
+                      stateFromGeoJSON(
+                        feature
+                      );
+
+
+                    updateMapPanel(
+                      selectedMapState,
+                      true
+                    );
+
+
+                    document
+                      .querySelector(
+                        "#stateDetailCard"
+                      )
+                      ?.scrollIntoView(
+                        {
+                          behavior:
+                            "smooth",
+
+                          block:
+                            "start"
+                        }
+                      );
+
+                  }
+
+              });
+
+            }
+
+        }
+      )
+      .addTo(map);
+
+
+    map.fitBounds(
+      mapLayer.getBounds(),
+      {
+        padding:
+          [10, 10]
+      }
+    );
+
+
+    mapReady =
+      true;
+
+
+    renderMapData(
+      filteredRows
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      error
+    );
+
+
+    $("#indiaMap")
+      .innerHTML = `
+
+        <div class="map-error">
+
+          India state boundary data
+          could not be loaded.
+
+          State analytics remain
+          available below.
+
+        </div>
+
+      `;
+
+  }
+
+}
+
+
+
+/* =====================================================
+   MAP PAGE
+===================================================== */
+
+function renderMapPage(
+  rows
+) {
+
+  filteredRows =
+    rows;
+
+
+  $("#mapPeriod")
+    .textContent =
+      labelMonth(
+        currentMonth
+      );
+
+
+  renderMapData(
+    rows
+  );
+
+
+  if (selectedMapState) {
+
+    updateMapPanel(
+      selectedMapState,
+      true
+    );
+
+  } else {
+
+    updateMapPanel(
+      "All India",
+      false
+    );
+
+  }
+
+}
+
+
+
+/* =====================================================
+   RENDER EVERYTHING
+===================================================== */
+
+function renderAll() {
+
+  filteredRows =
+    getFilteredRows();
+
+
+  const period =
+    labelMonth(
+      currentMonth
+    );
+
+
+  [
+    "#dashPeriod",
+    "#mapPeriod",
+    "#selectedPeriodLabel"
+  ]
     .forEach(
-      button => {
+      (id) => {
+
+        if ($(id)) {
+
+          $(id)
+            .textContent =
+              period;
+
+        }
+
+      }
+    );
+
+
+  $("#monthValue")
+    .textContent =
+      period;
+
+
+  renderKPIs(
+    filteredRows
+  );
+
+
+  renderDashboardCharts(
+    filteredRows
+  );
+
+
+  renderDashboardDataTables(
+    filteredRows
+  );
+
+
+  renderImportant(
+    filteredRows
+  );
+
+
+  renderProjectTable(
+    filteredRows
+  );
+
+
+  renderRiskPage(
+    filteredRows
+  );
+
+
+  renderAnalysisPage(
+    filteredRows
+  );
+
+
+  renderMapPage(
+    filteredRows
+  );
+
+}
+
+
+
+/* =====================================================
+   MONTH SLIDER
+===================================================== */
+
+function renderMonthSlider() {
+
+  const container =
+    $("#monthSlider");
+
+
+  container.innerHTML =
+
+    months
+
+      .map(
+        (month) => `
+
+          <button
+            class="month-chip ${
+              month === currentMonth
+                ? "active"
+                : ""
+            }"
+            data-month="${esc(month)}"
+          >
+
+            ${esc(
+              labelMonth(
+                month
+              ).split(" ")[0]
+            )}
+
+          </button>
+
+        `
+      )
+
+      .join("");
+
+
+  container
+    .querySelectorAll(
+      "button"
+    )
+    .forEach(
+      (button) => {
 
         button.addEventListener(
           "click",
           () =>
-            report(
-              button.dataset.report
+            selectMonth(
+              button.dataset.month
             )
         );
 
@@ -4369,15 +3774,1222 @@ function setupEvents() {
 }
 
 
-// =====================================================
-// INITIALIZE
-// =====================================================
+
+/* =====================================================
+   YEAR FILTER
+===================================================== */
+
+function renderYearFilter() {
+
+  const years =
+    [
+      ...new Set(
+        months
+          .map(
+            (month) =>
+              String(
+                month
+              ).split("_").pop()
+          )
+          .filter(Boolean)
+      )
+    ]
+      .sort();
+
+
+  const select =
+    $("#yearFilter");
+
+
+  select.innerHTML =
+
+    years
+
+      .map(
+        (year) => `
+
+          <option
+            value="${esc(year)}"
+          >
+            ${esc(year)}
+          </option>
+
+        `
+      )
+
+      .join("");
+
+
+  select.value =
+    String(
+      currentMonth
+    )
+      .split("_")
+      .pop();
+
+}
+
+
+
+/* =====================================================
+   SELECT MONTH
+===================================================== */
+
+async function selectMonth(
+  month
+) {
+
+  if (
+    !month ||
+    (
+      month ===
+      currentMonth &&
+      allRows.length
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  currentMonth =
+    month;
+
+
+  renderMonthSlider();
+
+  renderYearFilter();
+
+
+  toast(
+    `Loading ${labelMonth(month)}…`
+  );
+
+
+  try {
+
+    allRows =
+      await fetchMonth(
+        month
+      );
+
+
+    selectedMapState =
+      null;
+
+
+    populateSelectors();
+
+    renderAll();
+
+
+    toast(
+      `${labelMonth(month)} loaded`
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      error
+    );
+
+
+    allRows = [];
+
+
+    renderAll();
+
+
+    toast(
+      "Monthly data could not be loaded. Check FastAPI."
+    );
+
+  }
+
+}
+
+
+
+/* =====================================================
+   YEAR CHANGE
+===================================================== */
+
+function handleYearChange(
+  year
+) {
+
+  const matches =
+    months.filter(
+      (month) =>
+        String(
+          month
+        ).endsWith(
+          `_${year}`
+        )
+    );
+
+
+  if (!matches.length) {
+
+    return;
+
+  }
+
+
+  const preferred =
+    matches.find(
+      (month) =>
+        month ===
+        currentMonth
+    ) ||
+    matches[
+      matches.length - 1
+    ];
+
+
+  selectMonth(
+    preferred
+  );
+
+}
+
+
+
+/* =====================================================
+   PAGE NAVIGATION
+===================================================== */
+
+function showPage(
+  page
+) {
+
+  $$(".page")
+    .forEach(
+      (section) => {
+
+        section.classList.toggle(
+          "active",
+          section.id ===
+            `page-${page}`
+        );
+
+      }
+    );
+
+
+  $$(".nav-link")
+    .forEach(
+      (button) => {
+
+        button.classList.toggle(
+          "active",
+          button.dataset.page ===
+            page
+        );
+
+      }
+    );
+
+
+  window.scrollTo(
+    {
+      top: 0,
+      behavior:
+        "smooth"
+    }
+  );
+
+
+  if (
+    page === "map" &&
+    !mapReady
+  ) {
+
+    setTimeout(
+      initMap,
+      60
+    );
+
+  }
+
+
+  if (
+    page === "map"
+  ) {
+
+    setTimeout(
+      () =>
+        map?.invalidateSize(),
+      120
+    );
+
+  }
+
+}
+
+
+
+/* =====================================================
+   CHART DATA / CHART TOGGLE
+===================================================== */
+
+function setupChartToggles() {
+
+  $$(".chart-card")
+    .forEach(
+      (card) => {
+
+        const buttons =
+          card.querySelectorAll(
+            ".chart-tools button"
+          );
+
+
+        const chartBody =
+          card.querySelector(
+            ".chart-body"
+          );
+
+
+        const dataBody =
+          card.querySelector(
+            ".data-body"
+          );
+
+
+        buttons.forEach(
+          (button) => {
+
+            button.addEventListener(
+              "click",
+              () => {
+
+                const showData =
+                  button.dataset.view ===
+                  "data";
+
+
+                buttons.forEach(
+                  (b) =>
+                    b.classList.toggle(
+                      "active",
+                      b === button
+                    )
+                );
+
+
+                chartBody
+                  ?.classList.toggle(
+                    "hidden",
+                    showData
+                  );
+
+
+                dataBody
+                  ?.classList.toggle(
+                    "hidden",
+                    !showData
+                  );
+
+              }
+            );
+
+          }
+        );
+
+      }
+    );
+
+}
+
+
+
+/* =====================================================
+   MINISTRY / SECTOR SLIDER CONTROLS
+===================================================== */
+
+function setupAnalysisSliderControls() {
+
+  $("#ministryPrev").onclick =
+    () => {
+
+      ministryOffset =
+        Math.max(
+          0,
+          ministryOffset - 1
+        );
+
+
+      renderChoiceSlider(
+        "ministry",
+        filteredRows
+      );
+
+    };
+
+
+  $("#ministryNext").onclick =
+    () => {
+
+      ministryOffset =
+        Math.min(
+          Math.max(
+            0,
+            getMinistryItems(
+              filteredRows
+            ).length - 1
+          ),
+
+          ministryOffset + 1
+        );
+
+
+      renderChoiceSlider(
+        "ministry",
+        filteredRows
+      );
+
+    };
+
+
+  $("#sectorPrev").onclick =
+    () => {
+
+      sectorOffset =
+        Math.max(
+          0,
+          sectorOffset - 1
+        );
+
+
+      renderChoiceSlider(
+        "sector",
+        filteredRows
+      );
+
+    };
+
+
+  $("#sectorNext").onclick =
+    () => {
+
+      sectorOffset =
+        Math.min(
+          Math.max(
+            0,
+            getSectorItems(
+              filteredRows
+            ).length - 1
+          ),
+
+          sectorOffset + 1
+        );
+
+
+      renderChoiceSlider(
+        "sector",
+        filteredRows
+      );
+
+    };
+
+}
+
+
+
+/* =====================================================
+   ACCESSIBILITY
+===================================================== */
+
+function setupAccessibility() {
+
+  $("#accessBtn").onclick =
+    () => {
+
+      accessibilityStep =
+        (
+          accessibilityStep + 1
+        ) % 3;
+
+
+      document.body
+        .classList.remove(
+          "font-plus",
+          "font-large"
+        );
+
+
+      if (
+        accessibilityStep ===
+        1
+      ) {
+
+        document.body
+          .classList.add(
+            "font-plus"
+          );
+
+      }
+
+
+      if (
+        accessibilityStep ===
+        2
+      ) {
+
+        document.body
+          .classList.add(
+            "font-large"
+          );
+
+      }
+
+
+      toast(
+
+        accessibilityStep === 0
+
+          ? "Default font size"
+
+          : accessibilityStep === 1
+
+            ? "Larger font"
+
+            : "Largest font"
+
+      );
+
+    };
+
+
+  $("#contrastBtn").onclick =
+    () => {
+
+      document.body
+        .classList.toggle(
+          "high-contrast"
+        );
+
+
+      toast(
+        "Contrast updated"
+      );
+
+    };
+
+
+  $("#langBtn").onclick =
+    () =>
+      toast(
+        "Hindi language layer is reserved for the next phase"
+      );
+
+
+  $("#topLangBtn").onclick =
+    () =>
+      toast(
+        "Hindi language layer is reserved for the next phase"
+      );
+
+}
+
+
+
+/* =====================================================
+   PROJECT DETAIL MODAL
+===================================================== */
+
+function openProjectModal(
+  project
+) {
+
+  $("#projectModalTitle")
+    .textContent =
+      project.project_name;
+
+
+  $("#projectModalBody")
+    .innerHTML = `
+
+      <div class="detail-grid">
+
+        <div>
+
+          <span>
+            Project ID
+          </span>
+
+          <strong>
+            ${esc(
+              project.project_code
+            )}
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Ministry
+          </span>
+
+          <strong>
+            ${esc(
+              project.line_ministry
+            )}
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            State
+          </span>
+
+          <strong>
+            ${esc(
+              project.state
+            )}
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Sector
+          </span>
+
+          <strong>
+            ${esc(
+              project.sector
+            )}
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Original Cost
+          </span>
+
+          <strong>
+            ${money(
+              project.original_cost
+            )}
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Revised / Current Cost
+          </span>
+
+          <strong>
+            ${money(
+              project.current_cost
+            )}
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Physical Progress
+          </span>
+
+          <strong>
+            ${fmt(
+              project.physical_progress
+            )}%
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Financial Progress
+          </span>
+
+          <strong>
+            ${fmt(
+              project.financial_progress
+            )}%
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Cost Risk
+          </span>
+
+          <strong>
+            ${fmt(
+              project.cost_risk
+            )}/100
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Delay Risk
+          </span>
+
+          <strong>
+            ${fmt(
+              project.delay_risk
+            )}/100
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>
+            Overall Risk
+          </span>
+
+          <strong>
+            ${riskBadge(
+              project
+            )}
+          </strong>
+
+        </div>
+
+      </div>
+
+    `;
+
+
+  $("#projectModal")
+    .classList.remove(
+      "hidden"
+    );
+
+}
+
+
+
+/* =====================================================
+   ADMIN MODAL
+===================================================== */
+
+function setupAdminModal() {
+
+  $("#adminOpen").onclick =
+    () =>
+      $("#adminModal")
+        .classList.remove(
+          "hidden"
+        );
+
+
+  $("#adminClose").onclick =
+    () =>
+      $("#adminModal")
+        .classList.add(
+          "hidden"
+        );
+
+
+  $("#adminModal").onclick =
+    (event) => {
+
+      if (
+        event.target.id ===
+        "adminModal"
+      ) {
+
+        $("#adminModal")
+          .classList.add(
+            "hidden"
+          );
+
+      }
+
+    };
+
+
+  $("#projectModalClose").onclick =
+    () =>
+      $("#projectModal")
+        .classList.add(
+          "hidden"
+        );
+
+
+  $("#adminLogin").onsubmit =
+    (event) => {
+
+      event.preventDefault();
+
+
+      /*
+       * IMPORTANT:
+       * Do NOT call an invented endpoint.
+       *
+       * Backend currently has no
+       * admin authentication route.
+       */
+
+      toast(
+        "Admin authentication needs its backend endpoint first"
+      );
+
+    };
+
+}
+
+
+
+/* =====================================================
+   PROTOTYPE ASSISTANT
+===================================================== */
+
+function setupChat() {
+
+  $("#chatForm").onsubmit =
+    (event) => {
+
+      event.preventDefault();
+
+
+      const query =
+        $("#chatInput")
+          .value
+          .trim();
+
+
+      if (!query) {
+
+        return;
+
+      }
+
+
+      $("#messages")
+        .insertAdjacentHTML(
+
+          "beforeend",
+
+          `
+
+            <div class="message user">
+
+              <b>
+                You:
+              </b>
+
+              ${esc(query)}
+
+            </div>
+
+          `
+
+        );
+
+
+      const q =
+        query.toLowerCase();
+
+
+      let answer =
+
+        "I can summarize the selected month from the loaded project data. Try asking about risk, sectors, states, cost or progress.";
+
+
+
+      if (
+        q.includes(
+          "highest risk"
+        ) &&
+        q.includes(
+          "project"
+        )
+      ) {
+
+        answer =
+
+          [...filteredRows]
+
+            .sort(
+              (a, b) =>
+                b.risk -
+                a.risk
+            )
+
+            .slice(0, 3)
+
+            .map(
+              (p) =>
+                `${esc(
+                  p.project_name
+                )} — ${p.risk}/100`
+            )
+
+            .join("<br>") ||
+
+          answer;
+
+      }
+
+
+      else if (
+        q.includes(
+          "sector"
+        )
+      ) {
+
+        const x =
+          aggregate(
+            filteredRows,
+            "sector"
+          )[0];
+
+
+        answer =
+
+          x
+
+            ? `${esc(
+                x.key
+              )} has ${x.count} projects with average risk ${fmt(
+                x.avgRisk
+              )}.`
+
+            : answer;
+
+      }
+
+
+      else if (
+        q.includes(
+          "state"
+        )
+      ) {
+
+        const x =
+
+          aggregate(
+            filteredRows,
+            "state"
+          )
+
+            .filter(
+              (s) =>
+                s.key !==
+                "Other / Not detected"
+            )
+
+            .sort(
+              (a, b) =>
+                b.avgRisk -
+                a.avgRisk
+            )[0];
+
+
+        answer =
+
+          x
+
+            ? `${esc(
+                x.key
+              )} has the highest detected average risk at ${fmt(
+                x.avgRisk
+              )}.`
+
+            : answer;
+
+      }
+
+
+      else if (
+        q.includes(
+          "cost"
+        )
+      ) {
+
+        const stats =
+          overallStats(
+            filteredRows
+          );
+
+
+        answer =
+
+          `Selected portfolio: original ${money(
+            stats.original
+          )}, revised/current ${money(
+            stats.revised
+          )}, expenditure ${money(
+            stats.expenditure
+          )}.`;
+
+      }
+
+
+      $("#messages")
+        .insertAdjacentHTML(
+
+          "beforeend",
+
+          `
+
+            <div class="message bot">
+
+              ${answer}
+
+            </div>
+
+          `
+
+        );
+
+
+      $("#chatInput")
+        .value = "";
+
+    };
+
+
+  $$(".suggestions button")
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () => {
+
+            $("#chatInput")
+              .value =
+                button.dataset.prompt;
+
+
+            $("#chatForm")
+              .requestSubmit();
+
+          };
+
+      }
+    );
+
+}
+
+
+
+/* =====================================================
+   GENERAL EVENTS
+===================================================== */
+
+function setupEvents() {
+
+  $$(".nav-link")
+    .forEach(
+      (button) => {
+
+        button.onclick =
+          () =>
+            showPage(
+              button.dataset.page
+            );
+
+      }
+    );
+
+
+  $$("[data-page]")
+    .forEach(
+      (button) => {
+
+        if (
+          !button.classList
+            .contains(
+              "nav-link"
+            )
+        ) {
+
+          button.onclick =
+            () =>
+              showPage(
+                button.dataset.page
+              );
+
+        }
+
+      }
+    );
+
+
+  $("#globalSector").onchange =
+    renderAll;
+
+
+  $("#globalRisk").onchange =
+    renderAll;
+
+
+  $("#clearFilters").onclick =
+    () => {
+
+      $("#globalSector")
+        .value =
+        "all";
+
+
+      $("#globalRisk")
+        .value =
+        "all";
+
+
+      renderAll();
+
+    };
+
+
+  $("#projectSearch").oninput =
+    () =>
+      renderProjectTable(
+        filteredRows
+      );
+
+
+  $("#projectSector").onchange =
+    () =>
+      renderProjectTable(
+        filteredRows
+      );
+
+
+  $("#projectRisk").onchange =
+    () =>
+      renderProjectTable(
+        filteredRows
+      );
+
+
+  $("#yearFilter").onchange =
+    (event) =>
+      handleYearChange(
+        event.target.value
+      );
+
+}
+
+
+
+/* =====================================================
+   INITIALIZATION
+===================================================== */
 
 async function init() {
 
-  setupEvents();
+  try {
 
-  await loadBackendData();
+    setupEvents();
+
+    setupChartToggles();
+
+    setupAnalysisSliderControls();
+
+    setupAccessibility();
+
+    setupAdminModal();
+
+    setupChat();
+
+
+    const data =
+      await fetchJSON(
+        `${API_BASE}/paimana-projects/months`
+      );
+
+
+    months =
+      (
+        data.months ||
+        []
+      ).slice();
+
+
+    const knownOrder =
+      Object.keys(
+        MONTH_LABELS
+      );
+
+
+    months.sort(
+      (a, b) =>
+        knownOrder.indexOf(a) -
+        knownOrder.indexOf(b)
+    );
+
+
+    if (!months.length) {
+
+      throw new Error(
+        "No months returned by backend"
+      );
+
+    }
+
+
+    currentMonth =
+
+      months.includes(
+        "July_2026"
+      )
+
+        ? "July_2026"
+
+        : months[
+            months.length - 1
+          ];
+
+
+    renderMonthSlider();
+
+    renderYearFilter();
+
+
+    await selectMonth(
+      currentMonth
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      error
+    );
+
+
+    toast(
+      "Unable to connect to FastAPI. Start the backend on port 8000."
+    );
+
+  }
 
 }
 
