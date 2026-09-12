@@ -28,6 +28,12 @@ PDF_DIR = os.path.join(
     "flash_reports"
 )
 
+STATEWISE_DIR = os.path.join(
+    BASE_DIR,
+    "data",
+    "statewise"
+)
+
 
 # --------------------------------------------------
 # Load monthly PAIMANA data
@@ -75,6 +81,7 @@ def get_flash_reports():
         "reports": reports
     }
 
+
 # --------------------------------------------------
 # 2. Open specific Flash Report PDF
 # --------------------------------------------------
@@ -109,6 +116,7 @@ def get_flash_report(month: str):
         media_type="application/pdf",
         filename=report_files[month]
     )
+
 
 # --------------------------------------------------
 # 3. Ministry-wise data
@@ -384,3 +392,169 @@ def get_sector_wise(month: str = "July_2026"):
         "month": month,
         "sectors": results
     }
+
+
+# --------------------------------------------------
+# 5. State-wise data for Map Analysis
+# --------------------------------------------------
+
+@router.get("/state")
+def get_state_wise(month: str = "July_2026"):
+
+    if month != "July_2026":
+        return {
+            "month": month,
+            "states": [],
+            "message": (
+                "State-wise dataset currently available "
+                "for July 2026 only."
+            )
+        }
+
+    file_path = os.path.join(
+        STATEWISE_DIR,
+        "July_2026_State-Wise.csv"
+    )
+
+    if not os.path.exists(file_path):
+        return {
+            "error": "July 2026 state-wise CSV not found"
+        }
+
+    try:
+
+        df = pd.read_csv(
+            file_path,
+            skiprows=1,
+            header=None,
+            names=[
+                "sr_no",
+                "state",
+                "project_count",
+                "cost",
+                "expenditure"
+            ]
+        )
+
+        df = df.dropna(
+            how="all"
+        )
+
+        results = []
+
+        for _, row in df.iterrows():
+
+            state = str(
+                row["state"]
+            ).strip()
+
+            if not state or state.lower() == "nan":
+                continue
+
+            try:
+                project_count = int(
+                    float(row["project_count"])
+                )
+            except (
+                ValueError,
+                TypeError
+            ):
+                project_count = 0
+
+            cost_text = str(
+                row["cost"]
+            ).strip()
+
+            original_cost = 0.0
+            latest_cost = 0.0
+
+            try:
+
+                if "(" in cost_text:
+
+                    original_part = (
+                        cost_text
+                        .split("(")[0]
+                        .strip()
+                    )
+
+                    latest_part = (
+                        cost_text
+                        .split("(")[1]
+                        .replace(")", "")
+                        .strip()
+                    )
+
+                    original_cost = float(
+                        original_part
+                        .replace(",", "")
+                    )
+
+                    latest_cost = float(
+                        latest_part
+                        .replace(",", "")
+                    )
+
+                else:
+
+                    original_cost = float(
+                        cost_text
+                        .replace(",", "")
+                    )
+
+                    latest_cost = original_cost
+
+            except (
+                ValueError,
+                TypeError,
+                IndexError
+            ):
+
+                original_cost = 0.0
+                latest_cost = 0.0
+
+            try:
+
+                expenditure = float(
+                    str(row["expenditure"])
+                    .replace(",", "")
+                    .strip()
+                )
+
+            except (
+                ValueError,
+                TypeError
+            ):
+
+                expenditure = 0.0
+
+            results.append({
+                "state": state,
+                "project_count": project_count,
+                "original_cost": round(
+                    original_cost,
+                    2
+                ),
+                "latest_cost": round(
+                    latest_cost,
+                    2
+                ),
+                "expenditure": round(
+                    expenditure,
+                    2
+                )
+            })
+
+        return {
+            "month": "July_2026",
+            "data_as_of": "July 2026",
+            "states": results
+        }
+
+    except Exception as e:
+
+        return {
+            "error": (
+                f"Failed to read state-wise data: {str(e)}"
+            )
+        }

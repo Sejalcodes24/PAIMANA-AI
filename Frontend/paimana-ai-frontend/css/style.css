@@ -2597,3 +2597,8 @@ body.high-contrast {
   }
 
 }
+
+/* State detailed analysis removed from Map Analysis UI */
+#stateDetailCard {
+  display: none !important;
+}

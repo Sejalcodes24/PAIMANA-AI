@@ -1,6 +1,8 @@
-from fastapi import APIRouter
-import pandas as pd
-import os
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from database import get_db
+from models.project_db import ProjectDB
 
 
 router = APIRouter(
@@ -9,36 +11,22 @@ router = APIRouter(
 )
 
 
-def get_monthly_data():
+# =====================================================
+# AVAILABLE MONTHS
+# =====================================================
 
-    file_path = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        "data",
-        "paimana_monthly_combined.csv"
-    )
-
-    if not os.path.exists(file_path):
-        return None
-
-    return pd.read_csv(file_path)
-
-
-# 1. Get available months
 @router.get("/months")
-def get_available_months():
+def get_available_months(
+    db: Session = Depends(get_db)
+):
 
-    df = get_monthly_data()
-
-    if df is None:
-        return {
-            "error": "paimana_monthly_combined.csv not found"
-        }
-
-    months = (
-        df["snapshot_month"]
-        .dropna()
-        .unique()
-        .tolist()
+    rows = (
+        db.query(
+            ProjectDB.snapshot_month,
+            ProjectDB.snapshot_year
+        )
+        .distinct()
+        .all()
     )
 
     month_order = {
@@ -51,6 +39,14 @@ def get_available_months():
         "July_2026": 7
     }
 
+    months = [
+        row.snapshot_month
+        for row in rows
+        if row.snapshot_month
+    ]
+
+    months = list(set(months))
+
     months.sort(
         key=lambda x: month_order.get(x, 999)
     )
@@ -60,22 +56,17 @@ def get_available_months():
     }
 
 
-# 2. Get projects for selected month
-# Pagination prevents Swagger/frontend from loading thousands
-# of records at once.
+# =====================================================
+# MONTH-WISE PROJECT DATA
+# =====================================================
+
 @router.get("/")
 def get_paimana_projects(
-    month: str = None,
+    month: str | None = None,
     page: int = 1,
-    limit: int = 50
+    limit: int = 100,
+    db: Session = Depends(get_db)
 ):
-
-    df = get_monthly_data()
-
-    if df is None:
-        return {
-            "error": "paimana_monthly_combined.csv not found"
-        }
 
     if page < 1:
         return {
@@ -87,23 +78,28 @@ def get_paimana_projects(
             "error": "limit must be between 1 and 100"
         }
 
+    query = db.query(ProjectDB)
+
+    # Selected month filter
     if month:
-        df = df[
-            df["snapshot_month"] == month
-        ]
+        query = query.filter(
+            ProjectDB.snapshot_month == month
+        )
 
-    total_projects = len(df)
+    # Stable ordering
+    query = query.order_by(
+        ProjectDB.project_id
+    )
 
-    start = (page - 1) * limit
-    end = start + limit
+    total_projects = query.count()
 
-    paginated_df = df.iloc[start:end]
+    offset = (page - 1) * limit
 
-    paginated_df = paginated_df.astype(object)
-
-    paginated_df = paginated_df.where(
-        pd.notnull(paginated_df),
-        None
+    projects = (
+        query
+        .offset(offset)
+        .limit(limit)
+        .all()
     )
 
     return {
@@ -112,44 +108,94 @@ def get_paimana_projects(
         "limit": limit,
         "total_projects": total_projects,
         "total_pages": (
-            total_projects + limit - 1
-        ) // limit,
-        "projects": paginated_df.to_dict(
-            orient="records"
-        )
+            (total_projects + limit - 1) // limit
+            if total_projects
+            else 0
+        ),
+        "projects": [
+            {
+                "project_id": project.project_id,
+                "project_code": project.project_code,
+                "project_name": project.project_name,
+                "sector": project.sector,
+                "line_ministry": project.line_ministry,
+                "implementing_agency": project.implementing_agency,
+                "state": project.state,
+                "original_cost": project.original_cost,
+                "current_cost": project.current_cost,
+                "revised_cost": project.current_cost,
+                "expenditure": project.expenditure,
+                "physical_progress": project.physical_progress,
+                "financial_progress": project.financial_progress,
+                "original_completion_date": (
+                    project.original_completion_date.isoformat()
+                    if project.original_completion_date
+                    else None
+                ),
+                "revised_completion_date": (
+                    project.revised_completion_date.isoformat()
+                    if project.revised_completion_date
+                    else None
+                ),
+                "sanction_date": (
+                    project.sanction_date.isoformat()
+                    if project.sanction_date
+                    else None
+                ),
+                "snapshot_month": project.snapshot_month,
+                "snapshot_year": project.snapshot_year
+            }
+            for project in projects
+        ]
     }
 
 
-# 3. Get monthly history of one project
+# =====================================================
+# PROJECT HISTORY
+# =====================================================
+
 @router.get("/{project_code}/history")
-def get_project_history(project_code: int):
+def get_project_history(
+    project_code: int,
+    db: Session = Depends(get_db)
+):
 
-    df = get_monthly_data()
+    projects = (
+        db.query(ProjectDB)
+        .filter(
+            ProjectDB.project_code == project_code
+        )
+        .order_by(
+            ProjectDB.snapshot_year,
+            ProjectDB.project_id
+        )
+        .all()
+    )
 
-    if df is None:
-        return {
-            "error": "paimana_monthly_combined.csv not found"
-        }
-
-    df = df[
-        df["project_code"] == project_code
-    ]
-
-    if df.empty:
+    if not projects:
         return {
             "error": "Project not found"
         }
 
-    df = df.astype(object)
-
-    df = df.where(
-        pd.notnull(df),
-        None
-    )
-
     return {
         "project_code": project_code,
-        "history": df.to_dict(
-            orient="records"
-        )
+        "history": [
+            {
+                "project_id": project.project_id,
+                "project_code": project.project_code,
+                "project_name": project.project_name,
+                "sector": project.sector,
+                "line_ministry": project.line_ministry,
+                "implementing_agency": project.implementing_agency,
+                "state": project.state,
+                "original_cost": project.original_cost,
+                "current_cost": project.current_cost,
+                "expenditure": project.expenditure,
+                "physical_progress": project.physical_progress,
+                "financial_progress": project.financial_progress,
+                "snapshot_month": project.snapshot_month,
+                "snapshot_year": project.snapshot_year
+            }
+            for project in projects
+        ]
     }

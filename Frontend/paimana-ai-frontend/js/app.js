@@ -52,6 +52,9 @@ let mapReady = false;
 
 let selectedMapState = null;
 
+let statewiseData = [];
+let statewiseLoadedMonth = "";
+
 
 let selectedMinistry =
   "All Ministries";
@@ -128,6 +131,24 @@ const fmt = (
 const money = (value) =>
   `₹ ${fmt(value)} Cr`;
 
+function toast(message) {
+  const element = $("#toast");
+
+  if (!element) {
+    console.log(message);
+    return;
+  }
+
+  element.textContent = message;
+  element.classList.add("show");
+
+  clearTimeout(window.paimanaToastTimer);
+
+  window.paimanaToastTimer = setTimeout(() => {
+    element.classList.remove("show");
+  }, 2500);
+}
+
 
 function labelMonth(month) {
 
@@ -139,6 +160,8 @@ function labelMonth(month) {
   );
 
 }
+
+
 
 
 
@@ -643,6 +666,137 @@ async function fetchMonth(month) {
 
   return rows.map(
     normalizeRow
+  );
+
+}
+
+/* =====================================================
+   STATEWISE JULY 2026 DATA
+===================================================== */
+
+async function fetchStatewiseData(month) {
+
+  try {
+
+    const url =
+      `${API_BASE}/project-monitoring/state?month=${encodeURIComponent(month)}`;
+
+    console.log(
+      "Fetching statewise data:",
+      url
+    );
+
+    const data =
+      await fetchJSON(url);
+
+    console.log(
+      "STATEWISE BACKEND RESPONSE:",
+      data
+    );
+
+
+    let states = [];
+
+    if (Array.isArray(data)) {
+
+      states = data;
+
+    }
+    else if (Array.isArray(data.states)) {
+
+      states = data.states;
+
+    }
+    else if (Array.isArray(data.data)) {
+
+      states = data.data;
+
+    }
+
+
+    statewiseData =
+      states.map((item) => ({
+
+        ...item,
+
+        state:
+          item.state ||
+          item.state_name ||
+          item.stateName ||
+          item["State"] ||
+          item["State Name"] ||
+          item["State Wise Details"] ||
+          ""
+
+      }));
+
+
+    statewiseLoadedMonth =
+      month;
+
+
+    console.log(
+      "STATEWISE DATA LOADED:",
+      statewiseData.length,
+      statewiseData
+    );
+
+
+    return statewiseData;
+
+
+  } catch (error) {
+
+    console.error(
+      "Statewise data loading failed:",
+      error
+    );
+
+    statewiseData = [];
+
+    statewiseLoadedMonth = "";
+
+    return [];
+
+  }
+
+}
+
+
+/* =====================================================
+   STATEWISE LOOKUP
+===================================================== */
+
+function getStatewiseStat(state) {
+
+  const normalized =
+    normalizeState(state)
+      .trim()
+      .toLowerCase();
+
+  if (!statewiseData || !statewiseData.length) {
+    return null;
+  }
+
+  return (
+    statewiseData.find((item) => {
+
+      const itemState =
+        normalizeState(
+          item.state ||
+          item.state_name ||
+          item.stateName ||
+          item["State"] ||
+          item["State Name"] ||
+          item["State Wise Details"] ||
+          ""
+        )
+        .trim()
+        .toLowerCase();
+
+      return itemState === normalized;
+
+    }) || null
   );
 
 }
@@ -3036,25 +3190,99 @@ function stateFromGeoJSON(
 function renderMapData(
   rows
 ) {
+  /* =====================================================
+   MAP DATA
+===================================================== */
 
-  const stateStats =
-    {};
+function renderMapData(
+  rows
+) {
 
+  /*
+   * State colours now come from the
+   * dedicated July 2026 state-wise dataset.
+   *
+   * We do NOT try to invent states from
+   * project names.
+   */
 
-  aggregate(
-    rows,
-    "state"
-  ).forEach(
-    (x) => {
+  const stateStats = {};
 
-      stateStats[
+  statewiseData.forEach(
+    (item) => {
+
+      const state =
         normalizeState(
-          x.key
-        )
-      ] = x;
+          item.state
+        );
+
+      stateStats[state] = {
+
+        ...item,
+
+        count:
+          num(
+            item.project_count
+          ),
+
+        original:
+          num(
+            item.original_cost
+          ),
+
+        revised:
+          num(
+            item.latest_cost ??
+            item.revised_cost
+          ),
+
+        expenditure:
+          num(
+            item.expenditure
+          )
+
+      };
 
     }
   );
+
+
+  /*
+   * Fallback for any state data that
+   * may still be available from project rows.
+   *
+   * This keeps the existing dashboard
+   * behaviour intact.
+   */
+
+  if (
+    !statewiseData.length
+  ) {
+
+    aggregate(
+      rows,
+      "state"
+    ).forEach(
+      (x) => {
+
+        const state =
+          normalizeState(
+            x.key
+          );
+
+        if (
+          state !==
+          "Other / Not detected"
+        ) {
+
+          stateStats[state] = x;
+
+        }
+
+      }
+    );
+
+  }
 
 
   if (!mapLayer) {
@@ -3099,6 +3327,10 @@ function renderMapData(
       });
 
 
+      /*
+       * MAP HOVER TOOLTIP
+       */
+
       layer.bindTooltip(
 
         `
@@ -3112,12 +3344,34 @@ function renderMapData(
           ${
             stat
 
-              ? `${fmt(
+              ? `
+                Projects:
+                ${fmt(
                   stat.count,
                   0
-                )} projects · Avg risk ${fmt(
-                  stat.avgRisk
-                )}`
+                )}
+
+                <br>
+
+                Original:
+                ${money(
+                  stat.original
+                )}
+
+                <br>
+
+                Latest:
+                ${money(
+                  stat.revised
+                )}
+
+                <br>
+
+                Expenditure:
+                ${money(
+                  stat.expenditure
+                )}
+              `
 
               : "No project data"
           }
@@ -3125,6 +3379,7 @@ function renderMapData(
         `,
 
         {
+
           sticky:
             true,
 
@@ -3140,6 +3395,9 @@ function renderMapData(
 
 }
 
+  
+
+}
 
 
 /* =====================================================
@@ -3151,186 +3409,486 @@ function updateMapPanel(
   clicked = false
 ) {
 
-  const rows =
+  /*
+   * ===================================================
+   * NORMALIZE STATE
+   * ===================================================
+   */
 
+  const normalized =
+    normalizeState(state);
+
+
+  /*
+   * ===================================================
+   * GET STATE-WISE DATA
+   *
+   * This comes from:
+   * July_2026_State-Wise.csv
+   *
+   * Example:
+   *
+   * Maharashtra
+   * Projects      = 182
+   * Original      = 535255.42
+   * Revised       = 601442.86
+   * Expenditure   = 454254.95
+   * ===================================================
+   */
+
+  const stateStat =
+    getStatewiseStat(
+      normalized
+    );
+
+
+  /*
+   * ===================================================
+   * PROJECT ROWS
+   *
+   * These are used ONLY when we need
+   * project-level calculations such as
+   * physical progress / risk.
+   * ===================================================
+   */
+
+  const rows =
     state === "All India"
 
       ? filteredRows
 
       : filteredRows.filter(
-          (p) =>
-            normalizeState(
-              p.state
-            ) ===
-            normalizeState(
-              state
-            )
+          (p) => {
+
+            const projectState =
+              normalizeState(
+                p.state ||
+                p.State ||
+                p.state_name ||
+                p.stateName ||
+                ""
+              );
+
+            return (
+              projectState ===
+              normalized
+            );
+
+          }
         );
 
 
-  const stats =
-    overallStats(rows);
+  /*
+   * ===================================================
+   * PROJECT STATS
+   * ===================================================
+   */
+
+  const projectStats =
+    overallStats(
+      rows
+    );
 
 
-  $("#mapStateTitle")
-    .textContent =
+  /*
+   * ===================================================
+   * STATE-WISE SUMMARY VALUES
+   *
+   * IMPORTANT:
+   *
+   * Statewise CSV is the source of truth for:
+   *
+   * 1. Project count
+   * 2. Original cost
+   * 3. Revised cost
+   * 4. Expenditure
+   *
+   * We support multiple possible field names
+   * so frontend doesn't break if backend
+   * response naming changes.
+   * ===================================================
+   */
+
+  const stateProjects =
+    stateStat
+      ? num(
+          stateStat.project_count ??
+          stateStat.projects ??
+          stateStat.count ??
+          stateStat.projectCount ??
+          0
+        )
+      : 0;
+
+
+  const stateOriginal =
+    stateStat
+      ? num(
+          stateStat.original_cost ??
+          stateStat.original ??
+          stateStat.originalCost ??
+          0
+        )
+      : 0;
+
+
+  const stateRevised =
+    stateStat
+      ? num(
+          stateStat.latest_cost ??
+          stateStat.revised_cost ??
+          stateStat.revised ??
+          stateStat.latestCost ??
+          stateStat.revisedCost ??
+          0
+        )
+      : 0;
+
+
+  const stateExpenditure =
+    stateStat
+      ? num(
+          stateStat.expenditure ??
+          stateStat.expenditure_cumulative ??
+          stateStat.expenditureCum ??
+          0
+        )
+      : 0;
+
+
+  /*
+   * ===================================================
+   * FINAL SUMMARY VALUES
+   * ===================================================
+   */
+
+  const projects =
+    state === "All India"
+
+      ? projectStats.count
+
+      : stateProjects;
+
+
+  const original =
+    state === "All India"
+
+      ? projectStats.original
+
+      : stateOriginal;
+
+
+  const revised =
+    state === "All India"
+
+      ? projectStats.revised
+
+      : stateRevised;
+
+
+  const expenditure =
+    state === "All India"
+
+      ? projectStats.expenditure
+
+      : stateExpenditure;
+
+
+  /*
+   * ===================================================
+   * PROGRESS
+   *
+   * State-wise CSV does NOT contain physical progress.
+   *
+   * Therefore:
+   *
+   * - If project rows for the state exist,
+   *   calculate from those rows.
+   *
+   * - Otherwise show "—"
+   *
+   * Never show fake 0.
+   * ===================================================
+   */
+
+  const hasProjectRows =
+    rows.length > 0;
+
+
+  const avgPhysical =
+    hasProjectRows
+      ? projectStats.avgPhysical
+      : null;
+
+
+  /*
+   * ===================================================
+   * RISK
+   *
+   * Same rule:
+   * Calculate only if real project rows exist.
+   * ===================================================
+   */
+
+  const avgRisk =
+    hasProjectRows
+      ? projectStats.avgRisk
+      : null;
+
+
+  /*
+   * ===================================================
+   * HIGH RISK COUNT
+   * ===================================================
+   */
+
+  const high =
+    hasProjectRows
+
+      ? rows.filter(
+          (p) =>
+            p.level === "High"
+        ).length
+
+      : null;
+
+
+  /*
+   * ===================================================
+   * LEFT SIDE STATE PANEL
+   * ===================================================
+   */
+
+  const title =
+    $("#mapStateTitle");
+
+  if (title) {
+
+    title.textContent =
       state;
 
+  }
 
-  $("#mapStateSub")
-    .textContent =
+
+  /*
+   * SUBTITLE
+   */
+
+  const subtitle =
+    $("#mapStateSub");
+
+  if (subtitle) {
+
+    subtitle.textContent =
 
       state === "All India"
 
-        ? "Selected month portfolio summary"
+        ? "Data as of July 2026 — selected month portfolio summary"
 
         : clicked
 
-          ? "Selected state — click a project below for more detail"
+          ? "Data as of July 2026 — selected state"
 
-          : "Hovering selected state";
+          : "Data as of July 2026 — hovering over state";
+
+  }
 
 
-  $("#mapProjects")
-    .textContent =
+  /*
+   * ===================================================
+   * PROJECT COUNT
+   * ===================================================
+   */
+
+  const projectsElement =
+    $("#mapProjects");
+
+  if (projectsElement) {
+
+    projectsElement.textContent =
       fmt(
-        stats.count,
+        projects,
         0
       );
 
+  }
 
-  $("#mapOriginal")
-    .textContent =
+
+  /*
+   * ===================================================
+   * ORIGINAL COST
+   * ===================================================
+   */
+
+  const originalElement =
+    $("#mapOriginal");
+
+  if (originalElement) {
+
+    originalElement.textContent =
       money(
-        stats.original
+        original
       );
 
+  }
 
-  $("#mapRevised")
-    .textContent =
+
+  /*
+   * ===================================================
+   * REVISED COST
+   * ===================================================
+   */
+
+  const revisedElement =
+    $("#mapRevised");
+
+  if (revisedElement) {
+
+    revisedElement.textContent =
       money(
-        stats.revised
+        revised
       );
 
-
-  $("#mapProgress")
-    .textContent =
-      `${fmt(
-        stats.avgPhysical
-      )}%`;
+  }
 
 
-  $("#mapRisk")
-    .textContent =
-      fmt(
-        stats.avgRisk
+  /*
+   * ===================================================
+   * EXPENDITURE
+   * ===================================================
+   */
+
+  const expenditureElement =
+    $("#mapExpenditure");
+
+
+  if (expenditureElement) {
+
+    expenditureElement.textContent =
+      money(
+        expenditure
       );
 
-
-  $("#mapHigh")
-    .textContent =
-      fmt(
-        rows.filter(
-          (p) =>
-            p.level === "High"
-        ).length,
-        0
-      );
+  }
 
 
-  $("#stateDetailTitle")
-    .textContent =
-      `${state} — detailed project information`;
+  /*
+   * ===================================================
+   * PHYSICAL PROGRESS
+   * ===================================================
+   */
+
+  const progressElement =
+    $("#mapProgress");
+
+  if (progressElement) {
+
+    progressElement.textContent =
+
+      avgPhysical !== null &&
+      avgPhysical !== undefined
+
+        ? `${fmt(
+            avgPhysical
+          )}%`
+
+        : "—";
+
+  }
 
 
-  $("#stateDetailSub")
-    .textContent =
+  /*
+   * ===================================================
+   * AVG RISK
+   * ===================================================
+   */
 
-      `${labelMonth(
-        currentMonth
-      )} · ${rows.length} project record${
-        rows.length === 1
-          ? ""
-          : "s"
-      }`;
+  const riskElement =
+    $("#mapRisk");
 
+  if (riskElement) {
 
-  $("#stateDetailBody")
-    .innerHTML =
+    riskElement.textContent =
 
-      rows.length
+      avgRisk !== null &&
+      avgRisk !== undefined
 
-        ? rows
+        ? fmt(
+            avgRisk
+          )
 
-            .slice()
+        : "—";
 
-            .sort(
-              (a, b) =>
-                b.risk -
-                a.risk
-            )
-
-            .slice(0, 12)
-
-            .map(
-              (p) => `
-
-                <tr
-                  class="project-row"
-                  data-project-id="${esc(
-                    p.project_id
-                  )}"
-                >
-
-                  <td>
-
-                    ${esc(
-                      p.project_name
-                    )}
-
-                    <small>
-                      ${esc(
-                        p.project_code
-                      )}
-                    </small>
-
-                  </td>
-
-                  <td>
-                    ${esc(
-                      p.sector
-                    )}
-                  </td>
-
-                  <td>
-                    ${money(
-                      p.current_cost
-                    )}
-                  </td>
-
-                  <td>
-                    ${fmt(
-                      p.physical_progress
-                    )}%
-                  </td>
-
-                  <td>
-                    ${riskBadge(p)}
-                  </td>
-
-                </tr>
-
-              `
-            )
-
-            .join("")
-
-        : emptyRow(5);
+  }
 
 
-  bindProjectRows(
-    $("#stateDetailBody")
-  );
+  /*
+   * ===================================================
+   * HIGH RISK PROJECTS
+   * ===================================================
+   */
+
+  const highElement =
+    $("#mapHigh");
+
+  if (highElement) {
+
+    highElement.textContent =
+
+      high !== null &&
+      high !== undefined
+
+        ? fmt(
+            high,
+            0
+          )
+
+        : "—";
+
+  }
+
+
+  /*
+   * ===================================================
+   * REMOVE / CLEAR OLD DETAILED ANALYSIS
+   * ===================================================
+   *
+   * We don't generate the old project table here.
+   *
+   * The map page should show the state summary
+   * instead of repeating detailed project analysis.
+   * ===================================================
+   */
+
+  const detailTitle =
+    $("#stateDetailTitle");
+
+  const detailSub =
+    $("#stateDetailSub");
+
+  const detailBody =
+    $("#stateDetailBody");
+
+
+  if (detailTitle) {
+
+    detailTitle.textContent = "";
+
+  }
+
+
+  if (detailSub) {
+
+    detailSub.textContent = "";
+
+  }
+
+
+  if (detailBody) {
+
+    detailBody.innerHTML = "";
+
+  }
 
 }
 
@@ -3835,44 +4393,43 @@ function renderYearFilter() {
    SELECT MONTH
 ===================================================== */
 
-async function selectMonth(
-  month
-) {
+async function selectMonth(month) {
 
-  if (
-    !month ||
-    (
-      month ===
-      currentMonth &&
-      allRows.length
-    )
-  ) {
-
+  if (!month) {
     return;
-
   }
 
-
-  currentMonth =
-    month;
-
+  currentMonth = month;
 
   renderMonthSlider();
-
   renderYearFilter();
-
 
   toast(
     `Loading ${labelMonth(month)}…`
   );
 
-
   try {
+
+    // ---------------------------------------------
+    // Load selected month's project data
+    // ---------------------------------------------
 
     allRows =
       await fetchMonth(
         month
       );
+
+
+    // ---------------------------------------------
+    // Load state-wise data
+    //
+    // State-wise CSV currently available
+    // for July 2026.
+    // ---------------------------------------------
+
+    await fetchStatewiseData(
+      month
+    );
 
 
     selectedMapState =
@@ -3884,6 +4441,28 @@ async function selectMonth(
     renderAll();
 
 
+    // ---------------------------------------------
+    // Make sure map gets the latest state data
+    // after renderAll()
+    // ---------------------------------------------
+
+    if (
+      mapReady &&
+      mapLayer
+    ) {
+
+      renderMapData(
+        filteredRows
+      );
+
+      updateMapPanel(
+        "All India",
+        false
+      );
+
+    }
+
+
     toast(
       `${labelMonth(month)} loaded`
     );
@@ -3892,15 +4471,17 @@ async function selectMonth(
   } catch (error) {
 
     console.error(
+      "Month loading failed:",
       error
     );
 
-
     allRows = [];
 
+    statewiseData = [];
+
+    statewiseLoadedMonth = "";
 
     renderAll();
-
 
     toast(
       "Monthly data could not be loaded. Check FastAPI."
