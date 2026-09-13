@@ -23,7 +23,7 @@ MONTH_FILES = {
     "April_2026": "April_2026_clean (1).csv",
     "May_2026": "May_2026_clean (1).csv",
     "June_2026": "June_2026_clean (1).csv",
-    "July_2026": "July_2026 (1).csv"
+    "July_2026": "July_2026.csv"
 }
 
 
