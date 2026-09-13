@@ -9,7 +9,7 @@ from routes.paimana import router as paimana_router
 from routes import project_monitoring
 from routes import what_if
 from routes import early_warning
-
+from routes import assistant
 
 app = FastAPI(title="PAIMANA AI")
 @app.get("/health")
@@ -35,3 +35,4 @@ app.include_router(what_if.router)
 app.include_router(
     early_warning.router
 )
+app.include_router(assistant.router)
