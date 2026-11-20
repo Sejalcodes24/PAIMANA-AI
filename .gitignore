@@ -1,34 +1,8 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Virtual environment
-venv/
-.venv/
-env/
-
-# Environment / secrets
-.env
-.env.*
-!.env.example
-
-# Python tooling
-.pytest_cache/
-.mypy_cache/
-
-# IDE
-.vscode/
-.idea/
-
-# OS
+node_modules/
+build/
+dist/
+coverage/
 .DS_Store
-Thumbs.db
-
-# Large/raw datasets
-backend/data/*.csv
-
-# Local database files
-*.db
-*.sqlite
-*.sqlite3
+*.log
+.env*
+!.env.example

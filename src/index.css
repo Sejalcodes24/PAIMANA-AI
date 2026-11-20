@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-sans: "Public Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: #f6f8fb;
+    background-image:
+      radial-gradient(circle at 12% 0%, rgba(255, 153, 51, 0.055), transparent 36%),
+      radial-gradient(circle at 88% 0%, rgba(19, 136, 8, 0.045), transparent 34%),
+      linear-gradient(180deg, #ffffff 0%, #f5f8fc 260px, #f6f8fb 100%);
+    color: #0f172a;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Purposeful animated Indian tricolour accent strip */
+@keyframes paimanaTricolourShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.paimana-tricolour-bar {
+  background: linear-gradient(
+    90deg,
+    #ff9933 0%,
+    #ffb366 18%,
+    #ffffff 48%,
+    #e2e8f0 52%,
+    #138808 82%,
+    #16a34a 100%
+  );
+  background-size: 160% 100%;
+  animation: paimanaTricolourShift 11s ease-in-out infinite;
+}
+
+/* Slow orbital backdrop rotation inside navy hero banner */
+@keyframes paimanaSlowOrbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.paimana-hero-orbit {
+  animation: paimanaSlowOrbit 48s linear infinite;
+  transform-origin: center;
+}
+
+/* Restrained 3D layered depth for white monitoring surfaces */
+.paimana-panel-layered {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 10px 26px -8px rgba(11, 37, 69, 0.1),
+    0 2px 6px rgba(11, 37, 69, 0.05);
+}
+
+.paimana-surface-depth {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 8px 22px -6px rgba(11, 37, 69, 0.09),
+    0 2px 5px rgba(11, 37, 69, 0.04);
+}
+
+.paimana-card-3d {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 6px 18px -4px rgba(11, 37, 69, 0.08),
+    0 2px 5px rgba(11, 37, 69, 0.04);
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 220ms ease;
+  transform: perspective(1100px) translateZ(0);
+}
+
+.paimana-card-3d:hover {
+  transform: perspective(1100px) translateY(-3px) rotateX(1deg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 16px 32px -8px rgba(11, 37, 69, 0.14),
+    0 4px 10px rgba(2, 132, 199, 0.09);
+}
+
+/* Leaflet map container overrides for formal monitoring-portal aesthetic */
+.paimana-leaflet-container {
+  background: radial-gradient(circle at 50% 45%, #ffffff 0%, #f1f5f9 100%) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.paimana-leaflet-container path.leaflet-interactive {
+  transition: fill-opacity 200ms ease, stroke-width 200ms ease, stroke 200ms ease, fill 240ms ease;
+}
+
+.paimana-leaflet-container .leaflet-tooltip {
+  background-color: #081b33;
+  color: #ffffff;
+  border: 1px solid #ff9933;
+  border-radius: 5px;
+  padding: 6px 10px;
+  font-size: 12px;
+  box-shadow: 0 6px 16px rgba(8, 27, 51, 0.28);
+}
+
+.paimana-leaflet-container .leaflet-tooltip-top::before {
+  border-top-color: #081b33;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paimana-tricolour-bar,
+  .paimana-hero-orbit,
+  .paimana-leaflet-container path.leaflet-interactive,
+  .paimana-animated-bar,
+  .paimana-card-3d {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .paimana-card-3d:hover {
+    transform: none !important;
+  }
+}

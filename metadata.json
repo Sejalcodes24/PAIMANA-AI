@@ -1,0 +1,6 @@
+{
+  "name": "PAIMANA AI Prototype",
+  "description": "Infrastructure project monitoring, explainable cost and schedule risk analytics, interactive India state map, and data-grounded AI assistant prototype modeled on MoSPI PAIMANA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

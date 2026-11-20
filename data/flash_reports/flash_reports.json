@@ -1,0 +1,82 @@
+[
+  {
+    "id": "JUL-2026",
+    "month": "2026-07",
+    "monthLabel": "July 2026",
+    "title": "MoSPI PAIMANA Flash Report — July 2026",
+    "publishedDate": "July 2026",
+    "summary": "Official PAIMANA monthly Flash Report for July 2026. The accompanying project CSV in this build contains 1,775 project records for the same reporting month.",
+    "highlights": [
+      "Official PIB release for the July 2026 Flash Report is linked here.",
+      "Monthly project-level CSV is included in the data archive.",
+      "State-wise summary is separately available for July 2026 only."
+    ],
+    "totalProjectsCovered": 1775,
+    "totalOutlayCr": 3710640.46,
+    "sourceCsvFile": "data/monthly/paimana_2026_07.csv",
+    "referencePdfName": "Official PIB July 2026 report release",
+    "deduplicatedFilesSkipped": [],
+    "reportUrl": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2303115&lang=1&reg=48",
+    "reportLinkLabel": "Open official July 2026 report release"
+  },
+  {
+    "id": "JUN-2026",
+    "month": "2026-06",
+    "monthLabel": "June 2026",
+    "title": "MoSPI PAIMANA Flash Report — June 2026",
+    "publishedDate": "June 2026",
+    "summary": "Official PAIMANA monthly Flash Report for June 2026. The accompanying project CSV in this build contains 1,847 project records for the same reporting month.",
+    "highlights": [
+      "Original monthly Flash Report PDF included with this project.",
+      "Monthly project-level CSV is available in the data archive.",
+      "State-wise summary is separately available for July 2026 only."
+    ],
+    "totalProjectsCovered": 1847,
+    "totalOutlayCr": 2624569.93,
+    "sourceCsvFile": "data/monthly/paimana_2026_06.csv",
+    "referencePdfName": "FlashReport_June_2026.pdf",
+    "deduplicatedFilesSkipped": [],
+    "reportUrl": "/reports/FlashReport_June_2026.pdf",
+    "reportLinkLabel": "Open original Flash Report PDF"
+  },
+  {
+    "id": "MAY-2026",
+    "month": "2026-05",
+    "monthLabel": "May 2026",
+    "title": "MoSPI PAIMANA Flash Report — May 2026",
+    "publishedDate": "May 2026",
+    "summary": "Official PAIMANA monthly Flash Report for May 2026. The accompanying project CSV in this build contains 1,987 project records for the same reporting month.",
+    "highlights": [
+      "Original monthly Flash Report PDF included with this project.",
+      "Monthly project-level CSV is available in the data archive.",
+      "State-wise summary is separately available for July 2026 only."
+    ],
+    "totalProjectsCovered": 1987,
+    "totalOutlayCr": 2809238.94,
+    "sourceCsvFile": "data/monthly/paimana_2026_05.csv",
+    "referencePdfName": "FlashReport_May2026.pdf",
+    "deduplicatedFilesSkipped": [],
+    "reportUrl": "/reports/FlashReport_May2026.pdf",
+    "reportLinkLabel": "Open original Flash Report PDF"
+  },
+  {
+    "id": "APR-2026",
+    "month": "2026-04",
+    "monthLabel": "April 2026",
+    "title": "MoSPI PAIMANA Flash Report — April 2026",
+    "publishedDate": "April 2026",
+    "summary": "Official PAIMANA monthly Flash Report for April 2026. The accompanying project CSV in this build contains 1,775 project records for the same reporting month.",
+    "highlights": [
+      "Original monthly Flash Report PDF included with this project.",
+      "Monthly project-level CSV is available in the data archive.",
+      "State-wise summary is separately available for July 2026 only."
+    ],
+    "totalProjectsCovered": 1775,
+    "totalOutlayCr": 2287270.46,
+    "sourceCsvFile": "data/monthly/paimana_2026_04.csv",
+    "referencePdfName": "FlashReport_April2026.pdf",
+    "deduplicatedFilesSkipped": [],
+    "reportUrl": "/reports/FlashReport_April2026.pdf",
+    "reportLinkLabel": "Open original Flash Report PDF"
+  }
+]

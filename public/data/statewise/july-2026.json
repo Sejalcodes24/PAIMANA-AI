@@ -1,0 +1,258 @@
+{
+  "source": "PAIMANA-AI-main/backend/data/statewise/July_2026_State-Wise.csv",
+  "reportingMonth": "2026-07",
+  "states": [
+    {
+      "state": "Maharashtra",
+      "projectCount": 182,
+      "originalOutlayCr": 535255.42,
+      "revisedOutlayCr": 601442.86,
+      "expenditureCr": 454254.95
+    },
+    {
+      "state": "Uttar Pradesh",
+      "projectCount": 168,
+      "originalOutlayCr": 536436.18,
+      "revisedOutlayCr": 548156.03,
+      "expenditureCr": 342271.33
+    },
+    {
+      "state": "Bihar",
+      "projectCount": 126,
+      "originalOutlayCr": 338139.67,
+      "revisedOutlayCr": 292208.33,
+      "expenditureCr": 187800.74
+    },
+    {
+      "state": "Andhra Pradesh",
+      "projectCount": 119,
+      "originalOutlayCr": 283186.58,
+      "revisedOutlayCr": 272612.62,
+      "expenditureCr": 195586.79
+    },
+    {
+      "state": "Madhya Pradesh",
+      "projectCount": 118,
+      "originalOutlayCr": 390076.67,
+      "revisedOutlayCr": 356952.02,
+      "expenditureCr": 193669.34
+    },
+    {
+      "state": "Karnataka",
+      "projectCount": 113,
+      "originalOutlayCr": 293274.81,
+      "revisedOutlayCr": 242198.55,
+      "expenditureCr": 176779.95
+    },
+    {
+      "state": "Odisha",
+      "projectCount": 108,
+      "originalOutlayCr": 305157.53,
+      "revisedOutlayCr": 261313.62,
+      "expenditureCr": 183622.73
+    },
+    {
+      "state": "Jharkhand",
+      "projectCount": 103,
+      "originalOutlayCr": 291510.24,
+      "revisedOutlayCr": 240249.36,
+      "expenditureCr": 163628.88
+    },
+    {
+      "state": "Gujarat",
+      "projectCount": 99,
+      "originalOutlayCr": 463616.39,
+      "revisedOutlayCr": 503175.72,
+      "expenditureCr": 418591.89
+    },
+    {
+      "state": "West Bengal",
+      "projectCount": 78,
+      "originalOutlayCr": 232645.9,
+      "revisedOutlayCr": 184454.21,
+      "expenditureCr": 141576.32
+    },
+    {
+      "state": "Chhattisgarh",
+      "projectCount": 77,
+      "originalOutlayCr": 237317.76,
+      "revisedOutlayCr": 185007.66,
+      "expenditureCr": 140530.15
+    },
+    {
+      "state": "Assam",
+      "projectCount": 76,
+      "originalOutlayCr": 203460.11,
+      "revisedOutlayCr": 189628.59,
+      "expenditureCr": 167803.92
+    },
+    {
+      "state": "Telangana",
+      "projectCount": 75,
+      "originalOutlayCr": 202755.04,
+      "revisedOutlayCr": 156938.14,
+      "expenditureCr": 111438.38
+    },
+    {
+      "state": "Rajasthan",
+      "projectCount": 74,
+      "originalOutlayCr": 316591.24,
+      "revisedOutlayCr": 332166.69,
+      "expenditureCr": 272259.78
+    },
+    {
+      "state": "Tamil Nadu",
+      "projectCount": 65,
+      "originalOutlayCr": 220043.25,
+      "revisedOutlayCr": 221723.72,
+      "expenditureCr": 106817.51
+    },
+    {
+      "state": "Punjab",
+      "projectCount": 53,
+      "originalOutlayCr": 170769.4,
+      "revisedOutlayCr": 120178.12,
+      "expenditureCr": 118033.04
+    },
+    {
+      "state": "Uttarakhand",
+      "projectCount": 52,
+      "originalOutlayCr": 146179.29,
+      "revisedOutlayCr": 96740.21,
+      "expenditureCr": 103701.12
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "projectCount": 52,
+      "originalOutlayCr": 172125.46,
+      "revisedOutlayCr": 119458.58,
+      "expenditureCr": 114037.36
+    },
+    {
+      "state": "Manipur",
+      "projectCount": 40,
+      "originalOutlayCr": 144492.91,
+      "revisedOutlayCr": 94399.49,
+      "expenditureCr": 111448.86
+    },
+    {
+      "state": "Haryana",
+      "projectCount": 39,
+      "originalOutlayCr": 234235.61,
+      "revisedOutlayCr": 254819.13,
+      "expenditureCr": 240928.74
+    },
+    {
+      "state": "Himachal Pradesh",
+      "projectCount": 37,
+      "originalOutlayCr": 143839.41,
+      "revisedOutlayCr": 96645.29,
+      "expenditureCr": 102900.15
+    },
+    {
+      "state": "Kerala",
+      "projectCount": 37,
+      "originalOutlayCr": 184024.2,
+      "revisedOutlayCr": 134483.68,
+      "expenditureCr": 128395.07
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "projectCount": 28,
+      "originalOutlayCr": 191374.31,
+      "revisedOutlayCr": 156136.84,
+      "expenditureCr": 123875.42
+    },
+    {
+      "state": "Nagaland",
+      "projectCount": 27,
+      "originalOutlayCr": 129193.98,
+      "revisedOutlayCr": 80660.77,
+      "expenditureCr": 93688.27
+    },
+    {
+      "state": "Mizoram",
+      "projectCount": 24,
+      "originalOutlayCr": 128119.18,
+      "revisedOutlayCr": 70384.69,
+      "expenditureCr": 88640.23
+    },
+    {
+      "state": "Meghalaya",
+      "projectCount": 22,
+      "originalOutlayCr": 125233.08,
+      "revisedOutlayCr": 66616.46,
+      "expenditureCr": 88358.56
+    },
+    {
+      "state": "Sikkim",
+      "projectCount": 21,
+      "originalOutlayCr": 134454.41,
+      "revisedOutlayCr": 84759.0,
+      "expenditureCr": 107502.01
+    },
+    {
+      "state": "Delhi",
+      "projectCount": 19,
+      "originalOutlayCr": 107657.09,
+      "revisedOutlayCr": 111475.47,
+      "expenditureCr": 58309.55
+    },
+    {
+      "state": "Tripura",
+      "projectCount": 17,
+      "originalOutlayCr": 131859.11,
+      "revisedOutlayCr": 74046.8,
+      "expenditureCr": 93385.17
+    },
+    {
+      "state": "Puducherry",
+      "projectCount": 9,
+      "originalOutlayCr": 73855.07,
+      "revisedOutlayCr": 26440.31,
+      "expenditureCr": 55581.34
+    },
+    {
+      "state": "Goa",
+      "projectCount": 9,
+      "originalOutlayCr": 35071.43,
+      "revisedOutlayCr": 23924.15,
+      "expenditureCr": 9844.83
+    },
+    {
+      "state": "Ladakh",
+      "projectCount": 9,
+      "originalOutlayCr": 52745.96,
+      "revisedOutlayCr": 41982.8,
+      "expenditureCr": 31642.63
+    },
+    {
+      "state": "Andaman & Nicobar",
+      "projectCount": 9,
+      "originalOutlayCr": 112782.54,
+      "revisedOutlayCr": 53907.01,
+      "expenditureCr": 79168.67
+    },
+    {
+      "state": "Dadra & Nagar Haveli and Daman & Diu",
+      "projectCount": 7,
+      "originalOutlayCr": 203120.93,
+      "revisedOutlayCr": 144581.78,
+      "expenditureCr": 150644.49
+    },
+    {
+      "state": "Chandigarh",
+      "projectCount": 3,
+      "originalOutlayCr": 88070.13,
+      "revisedOutlayCr": 28746.97,
+      "expenditureCr": 57940.41
+    },
+    {
+      "state": "Lakshadweep",
+      "projectCount": 2,
+      "originalOutlayCr": 22819.69,
+      "revisedOutlayCr": 22819.69,
+      "expenditureCr": 21099.62
+    }
+  ]
+}
