@@ -1,104 +1,363 @@
-# PAIMANA AI
+# PAIMANA AI 🇮🇳
+### AI-Powered Infrastructure Monitoring, Risk Intelligence & Decision Support
 
-An interactive infrastructure-project monitoring, explainable risk analytics, What-If simulation, and conversational AI assistant portal modeled on MoSPI's **PAIMANA** (Project Assessment, Infrastructure Monitoring and Analytics for Nation-Building) structure.
+PAIMANA AI is a full-stack infrastructure monitoring and analytics platform inspired by the monitoring framework of **PAIMANA (Project Assessment, Infrastructure Monitoring and Analytics for Nation-Building)**.
 
-> **Notice:** PAIMANA AI is an independent monitoring and analytics application. Official government seals or ministry marks are intentionally omitted, and map data uses open DataMeet India boundaries (CC BY 4.0).
+The platform brings infrastructure project data, explainable risk analytics, predictive delay assessment, interactive visualizations, and AI-assisted insights into a unified dashboard.
 
----
+It helps users explore project performance, identify potential delays and cost overruns, understand risk factors, and simulate corrective actions through an interactive What-If environment.
 
-## Implemented Features
-
-- **Formal Monitoring Dashboard (`/`)**:
-  - Coordinated header branding in `src/assets/logos/`: original **PAIMANA AI** SVG logo (`paimana-ai-logo.svg`) and India-inspired **Ministry of Statistics and Programme Implementation** wordmark (`mospi-wordmark.svg`) featuring saffron, white, green, and blue data-wheel motifs (no official seals fabricated).
-  - Prominent navy blue (`#081B33`, `#0B2545`, `#13315C`) and crisp white portal layout with restrained cyan-blue (`#0284C7`, `#38BDF8`) and saffron (`#FF9933`, `#E66C0A`) accents, layered card depth, subtle 3D hover lift, and `prefers-reduced-motion` support.
-  - **Rotating Sector Infrastructure Banner & Live Sector Explorer**: Showcases Railways, Power & Nuclear Energy (incl. Kudankulam Nuclear), Roadways & Expressways, and Urban Metro with AI-generated editorial photography (`src/assets/images/`), accessible Pause/Resume and Next/Previous controls, and clickable sector cards backed by live monthly project counts, outlays, physical progress %, risk scores, and project drill-downs.
-  - Reporting month selector (`2026-01` through `2026-07`) updating KPIs, sector showcase, charts, watchlist, and state aggregates dynamically from backend APIs.
-  - 4-column KPI strip covering tracked projects ($\ge$ ₹150 Crore), anticipated outlay & escalation, delayed projects, and High/Critical risk exposure.
-  - **Interactive India State Map (Leaflet + GeoJSON)**: Uses locally hosted India State/UT boundary GeoJSON (`public/data/india-states.geojson`, sourced from DataMeet India boundaries, CC BY 4.0) with choropleth modes for **Project Count**, **Original Outlay**, **Revised Outlay**, and **Expenditure**, with hover tooltips and a state inspector. These figures come from the supplied July 2026 state-wise CSV; the map does not claim state-level risk or delay data.
-  - **Honest Geo Granularity**: The monthly project-level CSV does not contain individual State/UT assignments. The separate July state-wise report powers the map at aggregate level only; it is not used to assign individual project records to states or create project drill-downs.
-  - **Sector & Risk Charts + Priority Watchlist + Flash Reports**: Clickable sector cost bars, risk-tier breakdown bars, high-risk watchlist table, and monthly flash report highlights.
-- **Projects Directory (`Projects`)**:
-  - Live search, State/UT, Sector, Rule-Based Risk Tier, and Commissioning Status filters, multi-column sorting, pagination, loading skeletons, empty states, and error retry handling.
-- **Project Detail & Explainable Dual Risk Engine (`Project Detail`)**:
-  - Clearly separates **Rule-Based Risk Score (0–100)** (weighted rubric across schedule slippage, cost escalation, financial-vs-physical lag, and bottlenecks) from **ML Predictive Delay Hazard (%)** (calibrated logistic hazard model with feature-level log-odds attributions).
-  - Displays monthly historical progression across ingested snapshots and bottleneck-specific corrective recommendations.
-- **What-If Risk Simulator (`What-If Lab`)**:
-  - Adjust simulated schedule slippage, anticipated cost, physical progress, and bottleneck clearances via `POST /api/what-if/simulate`. Simulated outputs are clearly marked as **unsaved simulations** leaving official source records unchanged.
-- **Conversational, Data-Grounded AI Assistant (`Ask AI Assistant`)**:
-  - Intent-aware routing (`src/server/chatbot.ts`) handles greetings and small talk naturally, answers general questions about portal features and risk tiers, asks clarifying follow-up questions on ambiguous prompts, and grounds project/state/sector answers strictly in the active reporting month's records via `@google/genai` (`gemini-4-hydrogen`) with clickable **Cited Dataset Evidence** links.
-  - Falls back cleanly to a deterministic conversational and data-grounded router when `GEMINI_API_KEY` is not configured or unavailable.
-- **CSV Ingestion, Deduplication & OpenAPI Docs**:
-  - `src/server/dataImporter.ts` handles header aliases, `N/A`/`--` missing-value normalization, and skips duplicate-named `(1)` files (`paimana_2026_02 (1).csv`) as well as duplicate `projectCode::reportingMonth` records.
-  - Interactive OpenAPI reference available at `/api/docs` (schema at `/api/openapi.json`).
+> **Disclaimer:** PAIMANA AI is an independent analytics application and is not an official government platform. It does not represent or claim affiliation with MoSPI or any government ministry. Source data and geographic limitations are documented in [DATA_PROVENANCE.md](DATA_PROVENANCE.md).
 
 ---
 
-## Architecture & Key Files
+## ✨ Key Features
 
-- **Full-Stack Runtime**: Express + Vite (`server.ts` on port `3000`) with React 19, TypeScript, Tailwind CSS v4, Motion (`motion/react`), and Leaflet.
-  - *Note on Environment Adaptation*: This workspace runs inside the AI Studio Node/Express/Vite container without direct access to a user's local Windows directory (`C:/Users/...`). The data pipeline, risk engine, OpenAPI endpoints, and frontend are implemented in TypeScript/Express so the entire full-stack app runs from a single command on port `3000`. Drop additional monthly PAIMANA CSV files directly into `data/monthly/` and restart the server to ingest them automatically.
-- **Assets & Data Files**:
-  - `src/assets/logos/paimana-ai-logo.svg` & `src/assets/logos/mospi-wordmark.svg` — Coordinated original SVG header marks
-  - `src/assets/images/sector_*.jpg` — Generated sector infrastructure photography (Railways, Nuclear/Power, Highways, Urban Metro)
-  - `data/monthly/paimana_2026_01.csv` through `paimana_2026_07.csv` — converted from the supplied PAIMANA monthly project snapshots.
-  - `data/source_reports/` — July state-wise aggregate CSV; valid April–June Flash Report PDFs are served from `public/reports/`.
-  - `data/flash_reports/flash_reports.json` — report-card metadata for April–July 2026; PDFs are linked for April–June, and July links to the official PIB release because the supplied July PDF is damaged.
-  - `public/data/statewise/july-2026.json` — normalized July 2026 state-wise project count and financial summary, derived from the supplied state-wise CSV.
-  - See `DATA_PROVENANCE.md` for source mapping and limitations.
-  - `public/data/india-states.geojson`
-- **Core Modules**:
-  - `src/shared/types.ts` — Shared TypeScript domain interfaces
-  - `src/shared/risk.ts` — Rule-Based Risk Rubric, ML Delay Hazard model, Recommendations, and What-If Simulator
-  - `src/server/dataImporter.ts` — RFC-4180 CSV parser, header normalizer, duplicate `(1)` detector, state alias mapper
-  - `src/server/repository.ts` — Multi-month repository, aggregations, search/filter/sort/pagination
-  - `src/server/chatbot.ts` — Conversational intent router & server-side `@google/genai` grounded assistant with deterministic fallback
-  - `src/server/openapi.ts` — OpenAPI 3.0 spec & `/api/docs` HTML viewer
-  - `src/components/dashboard/SectorShowcaseBanner.tsx` — Rotating sector photo showcase & live sector project breakdown
-  - `server.ts` — Express API server + Vite middleware
+### 1. Infrastructure Monitoring Dashboard
+- Portfolio-level KPIs covering tracked projects, anticipated outlay, cost escalation, delays, and risk exposure.
+- Dynamic reporting month selection from January to July 2026.
+- Interactive sector explorer covering Railways, Power, Roadways, and Urban Metro infrastructure.
+- Sector-level project counts, financial outlays, physical progress, and risk insights.
+- Risk distribution charts, sector comparisons, priority watchlists, and monthly flash reports.
+
+### 2. Interactive India State Map
+- Leaflet-based interactive map with locally hosted GeoJSON boundaries.
+- Multiple visualization modes:
+  - Project Count
+  - Original Outlay
+  - Revised Outlay
+  - Expenditure
+- Interactive state tooltips and state-level financial summaries.
+
+**Data transparency:** The map uses a separate July 2026 state-wise aggregate report. Individual project-to-state assignments and exact project coordinates are not fabricated.
+
+### 3. Project Directory & Exploration
+- Search infrastructure projects.
+- Filter by State/UT, sector, risk tier, and commissioning status.
+- Sort project records using multiple parameters.
+- Paginated project listings with loading and error states.
+- Detailed project-level information.
+
+### 4. Explainable Dual Risk Intelligence
+
+PAIMANA AI uses two distinct risk assessment approaches:
+
+**Rule-Based Risk Score (0–100)**
+- Evaluates schedule delays.
+- Measures cost escalation.
+- Considers financial expenditure against physical progress.
+- Accounts for project bottlenecks.
+- Provides explainable risk factors and corrective recommendations.
+
+**ML Predictive Delay Hazard (%)**
+- Uses a calibrated logistic hazard model.
+- Estimates potential delay probability.
+- Provides feature-level log-odds attributions to help explain predictions.
+
+The two outputs are presented separately to distinguish rule-based assessment from ML-based prediction.
+
+### 5. What-If Risk Simulator
+Explore how potential corrective actions can influence project risk.
+
+Users can simulate changes to:
+- Schedule slippage.
+- Anticipated project cost.
+- Physical progress.
+- Project bottleneck clearances.
+
+The simulator returns updated risk assessments through the `POST /api/what-if/simulate` endpoint.
+
+All simulations are non-mutating: simulated changes do not overwrite source project records.
+
+### 6. AI-Powered Conversational Assistant
+An intent-aware assistant that supports natural-language interaction with the platform.
+
+Capabilities include:
+- Natural responses to greetings and general conversation.
+- Explanations of portal features and risk classifications.
+- Clarification of ambiguous questions.
+- State-wise, sector-wise, and project-specific queries.
+- Responses grounded in the active reporting month's project records.
+- Clickable dataset evidence references.
+
+Powered by Google's Gemini integration through `@google/genai`.
+
+A deterministic conversational and data-grounded fallback is available when the Gemini API key is not configured or the service is unavailable.
+
+### 7. Data Ingestion & API Documentation
+- CSV ingestion and parsing.
+- Header normalization and support for alternate column names.
+- Handling of missing values such as `N/A` and `--`.
+- Duplicate filename and duplicate project-record detection.
+- Automatic loading of available monthly snapshots.
+- Interactive OpenAPI documentation.
 
 ---
 
-## Setup & Commands
+## 🛠️ Technology Stack
+
+| Layer | Technologies |
+|---|---|
+| Frontend | React 19, TypeScript |
+| Build Tool | Vite 8 |
+| Styling | Tailwind CSS v4 |
+| Motion | Motion |
+| Maps | Leaflet, GeoJSON |
+| Charts & Visualization | Recharts |
+| Backend | Node.js, Express |
+| AI Integration | Google Gemini, `@google/genai` |
+| Risk Analytics | TypeScript, Logistic Hazard Model |
+| Data Processing | CSV ingestion, normalization, aggregation |
+| API Documentation | OpenAPI 3.0 |
+
+---
+
+## 🏗️ System Architecture
+
+```text
+                  PAIMANA AI
+                      |
+          React + TypeScript Frontend
+                      |
+                 REST APIs
+                      |
+              Express Backend
+                      |
+       +--------------+--------------+
+       |              |              |
+   Repository     Risk Engine    AI Assistant
+       |              |              |
+   CSV Datasets   Risk Scoring    Gemini API
+       |          What-If Lab     Fallback Router
+       |
+   Data Aggregation
+       |
+   Dashboard & Project Insights
+```
+
+### Core Modules
+
+| File | Responsibility |
+|---|---|
+| `server.ts` | Express server and Vite integration |
+| `src/shared/types.ts` | Shared domain interfaces |
+| `src/shared/risk.ts` | Risk engine, ML assessment, recommendations, and simulation |
+| `src/server/dataImporter.ts` | CSV parsing, normalization, and deduplication |
+| `src/server/repository.ts` | Data loading, aggregation, search, and filtering |
+| `src/server/chatbot.ts` | AI assistant and intent-aware routing |
+| `src/server/openapi.ts` | OpenAPI specification |
+| `src/components/dashboard/` | Dashboard components and sector showcase |
+
+---
+
+## 📁 Project Structure
+
+```text
+PAIMANA-AI/
+│
+├── data/
+│   ├── monthly/
+│   │   ├── paimana_2026_01.csv
+│   │   ├── paimana_2026_02.csv
+│   │   ├── paimana_2026_03.csv
+│   │   └── ... July 2026
+│   │
+│   ├── flash_reports/
+│   └── source_reports/
+│
+├── public/
+│   ├── data/
+│   │   ├── india-states.geojson
+│   │   └── statewise/
+│   └── reports/
+│
+├── src/
+│   ├── assets/
+│   ├── components/
+│   ├── pages/
+│   ├── server/
+│   └── shared/
+│
+├── server.ts
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+├── DATA_PROVENANCE.md
+└── README.md
+```
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 20+ and npm
 
-### Environment Variables
-Copy `.env.example` to `.env` if running locally outside AI Studio:
-- `PORT` (default `3000`)
-- `GEMINI_API_KEY` (optional; enables live Gemini responses in `/api/assistant/chat`. When unset, the deterministic conversational & data-grounded fallback runs automatically.)
-- `GEMINI_MODEL` (optional; defaults to `gemini-4-hydrogen`)
+- Node.js 20 or later
+- npm
+- Git
 
-### Run Commands
+### 1. Clone the Repository
+
 ```bash
-# Install dependencies
+git clone https://github.com/Sejalcodes24/PAIMANA-AI.git
+cd PAIMANA-AI
+```
+
+### 2. Install Dependencies
+
+```bash
 npm install
+```
 
-# Run unit tests (risk engine + CSV importer + chatbot intent router)
-npm test
+### 3. Configure Environment Variables
 
-# Start development server (Express API + Vite SPA on http://localhost:3000)
+Create a `.env` file in the project root using `.env.example` as a reference.
+
+```env
+PORT=3000
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-4-hydrogen
+```
+
+The Gemini API key is optional.
+
+Without it, the application uses its deterministic conversational and data-grounded fallback.
+
+**Never commit your actual `.env` file or API keys to GitHub.**
+
+### 4. Start the Development Server
+
+```bash
 npm run dev
+```
 
-# Build production bundle and run production server
+Open:
+
+**http://localhost:3000**
+
+### 5. Build for Production
+
+```bash
 npm run build
+```
+
+To start the production server on Windows PowerShell:
+
+```powershell
+$env:NODE_ENV="production"
 npm start
 ```
 
-### Key API Endpoints
-- `GET /api/health` — Service & dataset ingestion health
-- `GET /api/dashboard/summary?month=2026-03` — Portfolio KPIs, charts, state aggregates, watchlist
-- `GET /api/projects` — Search, filter, sort, paginate projects
-- `GET /api/projects/:projectCode` — Project detail, monthly history, dual risk breakdown
-- `POST /api/what-if/simulate` — Non-mutating What-If risk simulation
-- `GET /api/reports/flash` — Monthly flash reports metadata
-- `POST /api/assistant/chat` — Conversational & data-grounded AI assistant endpoint
-- `GET /api/docs` & `GET /api/openapi.json` — OpenAPI documentation
+On Linux/macOS, use:
+
+```bash
+npm start
+```
 
 ---
 
-## Known Limitations
+## 🔌 API Reference
 
-- **State-Level Location Granularity**: The monthly project-level CSV does not provide individual State/UT assignments. The July state-wise CSV supports aggregate map views only. Exact project coordinates and project-to-state mapping are not inferred.
-- **In-Memory CSV Repository**: Monthly CSVs in `data/monthly/` are parsed and indexed in memory on startup (`DATABASE_URL` in `.env.example` is reserved if extending to PostgreSQL).
-- **State-wise Map Coverage**: The supplied state-wise summary is for July 2026 only. The map remains explicitly tied to July source data even if another project reporting month is selected.
+The backend exposes RESTful endpoints for dashboard data, project exploration, simulations, and AI-assisted queries.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/health` | Application and dataset health |
+| GET | `/api/dashboard/summary` | Dashboard KPIs and analytics |
+| GET | `/api/projects` | Search, filter, sort, and paginate projects |
+| GET | `/api/projects/:projectCode` | Project details and monthly history |
+| POST | `/api/what-if/simulate` | Run a non-mutating risk simulation |
+| GET | `/api/reports/flash` | Monthly flash report metadata |
+| POST | `/api/assistant/chat` | Conversational AI assistant |
+| GET | `/api/docs` | Interactive API documentation |
+| GET | `/api/openapi.json` | OpenAPI specification |
+
+Example dashboard request:
+
+```http
+GET /api/dashboard/summary?month=2026-03
+```
+
+---
+
+## 📊 Data Sources & Transparency
+
+The application uses supplied PAIMANA monthly project snapshots covering January–July 2026, along with a separate July 2026 state-wise aggregate report.
+
+Data processing includes:
+- CSV header normalization.
+- Missing-value handling.
+- Duplicate record detection.
+- Monthly reporting snapshots.
+- Aggregation for dashboard visualizations.
+
+### Geographic Data Limitations
+
+The monthly project-level datasets do not provide individual State/UT assignments.
+
+Therefore:
+- State-level map visualizations use the separate July 2026 aggregate report.
+- Project records are not artificially assigned to states.
+- Exact project coordinates are not invented.
+- The state-wise map remains tied to July 2026 data, regardless of the selected project reporting month.
+
+For detailed source mappings and limitations, see **[DATA_PROVENANCE.md](DATA_PROVENANCE.md)**.
+
+---
+
+## 🧪 Testing & Development
+
+Run the automated test suite:
+
+```bash
+npm test
+```
+
+Run TypeScript checks:
+
+```bash
+npm run lint
+```
+
+Create the production build:
+
+```bash
+npm run build
+```
+
+---
+
+## 🔮 Future Scope
+
+Potential areas for further development include:
+
+- Persistent database integration.
+- Automated ingestion of updated project reports.
+- Expanded historical trend analysis.
+- More granular project-level geospatial information when reliable source data becomes available.
+- Enhanced predictive model evaluation and monitoring.
+- Role-based access and administrative workflows.
+
+---
+
+## ⚠️ Known Limitations
+
+- Project-level State/UT mapping is unavailable in the supplied monthly datasets.
+- The state-wise map currently uses July 2026 aggregate data only.
+- Monthly CSV datasets are loaded into an in-memory repository.
+- Gemini-powered responses require a valid API key; fallback functionality is available without one.
+- ML predictions are analytical estimates and should not be interpreted as guaranteed project outcomes.
+
+---
+
+## 👩‍💻 Project
+
+**PAIMANA AI — Infrastructure Monitoring & Risk Intelligence**
+
+Developed as an independent full-stack analytics project.
+
+**GitHub:** [Sejalcodes24/PAIMANA-AI](https://github.com/Sejalcodes24/PAIMANA-AI)
+
+---
+
+*Built to make
